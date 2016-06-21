@@ -19,5 +19,5 @@ print lorawan.get_mtype()
 print lorawan.get_mversion()
 print map(hex, lorawan.get_mic())
 print map(hex, bytearray(lorawan.compute_mic(nwkskey)))
-print bytearray(lorawan.decrypt_payload(nwkskey))
+print bytearray(lorawan.get_payload(nwkskey))
 ```
