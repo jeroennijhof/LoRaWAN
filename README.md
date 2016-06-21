@@ -1,5 +1,7 @@
 # LoRaWAN
-This is a LoRaWAN implementation in python.
+This is a LoRaWAN v1.0 implementation in python.
+
+See: https://www.lora-alliance.org/portals/0/specs/LoRaWAN%20Specification%201R0.pdf
 
 ## Installation
 Just git clone to your python source directory where you want to use this module.
