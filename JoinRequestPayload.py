@@ -29,9 +29,12 @@ class JoinRequestPayload:
     def get_devnonce(self):
         return self.devnonce
 
-    def compute_mic(self, key, mhdr):
+    def compute_mic(self, key, direction, mhdr):
         mic = [mhdr]
         mic += self.to_raw()
 
         cmac = AES_CMAC()
         return cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
+
+    def decrypt_payload(self, key, direction):
+        return self.to_raw()

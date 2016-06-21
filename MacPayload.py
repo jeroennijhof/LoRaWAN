@@ -31,9 +31,7 @@ class MacPayload:
             self.frm_payload = DataPayload(self, mac_payload[self.fhdr.length() + 1:])
 
     def length(self):
-        if self.frm_payload == None:
-            return self.fhdr.length()
-        return self.fhdr.length() + 1 + self.frm_payload.length()
+        return len(self.to_raw())
 
     def to_raw(self):
         mac_payload = []

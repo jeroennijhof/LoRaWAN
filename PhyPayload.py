@@ -9,11 +9,22 @@ from MajorVersion import MajorVersion
 
 class PhyPayload:
 
-    def __init__(self, packet):
+    def __init__(self):
+        self.direction = Direction(Direction.UP)
+
+    def length(self):
+        return len(self.to_raw())
+
+    def to_raw(self):
+        phy_payload = [self.mhdr]
+        phy_payload += self.mac_payload.to_raw()
+        phy_payload += self.mic
+        return phy_payload
+
+    def packet(self, packet):
         if len(packet) < 12:
             raise MalformedPacketException("Invalid lorawan packet");
 
-        self.direction = Direction(Direction.UP)
         self.mhdr = packet[0]
         self.mversion = MajorVersion(self.mhdr)
         self.mtype = MType(self.mhdr)
@@ -51,20 +62,8 @@ class PhyPayload:
     def set_mic(self, mic):
         self.mic = mic
 
-    def to_raw(self):
-        phy_payload = [self.mhdr]
-        phy_payload += self.mac_payload.to_raw()
-        phy_payload += self.mic
-        return phy_payload
-
     def compute_mic(self, key):
         return self.mac_payload.frm_payload.compute_mic(key, self.get_direction(), self.get_mhdr())
 
-    def decrypt_payload(self, key):
+    def get_payload(self, key):
         return self.mac_payload.frm_payload.decrypt_payload(key, self.get_direction())
-
-    def encrypt_payload(self, key, data):
-        return self.mac_payload.frm_payload.encrypt_payload(key, self.get_direction(), data)
-
-    def set_payload(self, key, data):
-        return self.mac_payload.frm_payload.set_payload(key, self.get_direction(), data)

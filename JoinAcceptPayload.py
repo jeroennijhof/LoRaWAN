@@ -49,7 +49,7 @@ class JoinAcceptPayload:
     def get_cflist(self):
         return self.cflist
 
-    def compute_mic(self, key, mhdr):
+    def compute_mic(self, key, direction, mhdr):
         mic = []
         mic += self.to_clear_raw()
         mic += [mhdr]
@@ -57,7 +57,7 @@ class JoinAcceptPayload:
         cmac = AES_CMAC()
         return cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
 
-    def decrypt_payload(self, key):
+    def decrypt_payload(self, key, direction):
         a = []
         a += self.encrypted_payload
         a += self.mic
