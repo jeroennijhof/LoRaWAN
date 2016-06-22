@@ -3,10 +3,11 @@
 #
 from MalformedPacketException import MalformedPacketException
 from struct import unpack
+from MType import MType
 
 class FHDR:
 
-    def __init__(self, mac_payload):
+    def read(self, mac_payload):
         if len(mac_payload) < 7:
             raise MalformedPacketException("Invalid fhdr")
 
@@ -15,6 +16,12 @@ class FHDR:
         self.fcnt = mac_payload[5:7]
         self.fopts = mac_payload[7:7 + (self.fctrl & 0xf)]
     
+    def create(self, mtype, args):
+        self.devaddr = [0x00, 0x00, 0x00, 0x00]
+        self.fctrl = 0x00
+        self.fcnt = [0x00, 0x00]
+        self.fopts = []
+
     def length(self):
         return 4 + 1 + 2 + (self.fctrl & 0xf)
 
@@ -23,7 +30,8 @@ class FHDR:
         fhdr += self.devaddr
         fhdr += [self.fctrl]
         fhdr += self.fcnt
-        fhdr += self.fopts
+        if self.fopts:
+            fhdr += self.fopts
         return fhdr
 
     def get_devaddr(self):

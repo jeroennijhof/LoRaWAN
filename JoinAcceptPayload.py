@@ -6,10 +6,9 @@ from Crypto.Cipher import AES
 
 class JoinAcceptPayload:
 
-    def __init__(self, mac_payload, payload):
+    def __init__(self, payload):
         if len(payload) < 16:
             raise MalformedPacketException("Invalid join accept");
-        self.mac_payload = mac_payload
         self.encrypted_payload = payload
         self.payload = self.decrypt_payload(payload)
 
@@ -55,7 +54,8 @@ class JoinAcceptPayload:
         mic += [mhdr]
 
         cmac = AES_CMAC()
-        return cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
+        computed_mic = cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
+        return map(int, bytearray(computed_mic))
 
     def decrypt_payload(self, key, direction):
         a = []

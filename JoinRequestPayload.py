@@ -1,14 +1,22 @@
 #
 # frm_payload: appeui(8) deveui(8) devnonce(2)
 #
+from AES_CMAC import AES_CMAC
+from Crypto.Cipher import AES
+
 class JoinRequestPayload:
 
-    def __init__(self, payload):
+    def read(self, payload):
         if len(payload) != 18:
             raise MalformedPacketException("Invalid join request");
         self.appeui = payload[:8]
         self.deveui = payload[8:16]
         self.devnonce = payload[16:18]
+
+    def create(self, args):
+        self.appeui = args['appeui']
+        self.deveui = args['deveui']
+        self.devnonce = args['devnonce']
 
     def length(self):
         return 18
@@ -34,7 +42,8 @@ class JoinRequestPayload:
         mic += self.to_raw()
 
         cmac = AES_CMAC()
-        return cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
+        computed_mic = cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
+        return map(int, bytearray(computed_mic))
 
     def decrypt_payload(self, key, direction):
         return self.to_raw()

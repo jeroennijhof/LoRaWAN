@@ -1,7 +1,4 @@
 from PhyPayload import PhyPayload
 
-def new(packet = None):
-    phy_payload = PhyPayload()
-    if packet:
-        phy_payload.packet(packet)
-    return phy_payload
+def new(key):
+    return PhyPayload(key)

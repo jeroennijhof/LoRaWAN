@@ -10,25 +10,40 @@ from DataPayload import DataPayload
 
 class MacPayload:
 
-    def __init__(self, mtype, mac_payload):
+    def read(self, mtype, mac_payload):
         if len(mac_payload) < 1:
             raise MalformedPacketException("Invalid mac payload")
 
-        self.fhdr = FHDR(mac_payload)
+        self.fhdr = FHDR()
+        self.fhdr.read(mac_payload)
         self.fport = mac_payload[self.fhdr.length()]
         self.frm_payload = None
         if mtype == MType.JOIN_REQUEST:
-            self.frm_payload = JoinRequestPayload(mac_payload[self.fhdr.length() + 1:])
+            self.frm_payload = JoinRequestPayload()
+            self.frm_payload.read(mac_payload[self.fhdr.length() + 1:])
         if mtype == MType.JOIN_ACCEPT:
-            self.frm_payload = JoinAcceptPayload(mac_payload[self.fhdr.length() + 1:])
-        if mtype == MType.UNCONF_DATA_UP:
-            self.frm_payload = DataPayload(self, mac_payload[self.fhdr.length() + 1:])
-        if mtype == MType.UNCONF_DATA_DOWN:
-            self.frm_payload = DataPayload(self, mac_payload[self.fhdr.length() + 1:])
-        if mtype == MType.CONF_DATA_UP:
-            self.frm_payload = DataPayload(self, mac_payload[self.fhdr.length() + 1:])
-        if mtype == MType.CONF_DATA_DOWN:
-            self.frm_payload = DataPayload(self, mac_payload[self.fhdr.length() + 1:])
+            self.frm_payload = JoinAcceptPayload()
+            self.frm_payload.read(mac_payload[self.fhdr.length() + 1:])
+        if mtype == MType.UNCONF_DATA_UP or mtype == MType.UNCONF_DATA_DOWN or\
+                mtype == MType.CONF_DATA_UP or mtype == MType.CONF_DATA_DOWN:
+            self.frm_payload = DataPayload()
+            self.frm_payload.read(self, mac_payload[self.fhdr.length() + 1:])
+
+    def create(self, mtype, args):
+        self.fhdr = FHDR()
+        self.fhdr.create(mtype, args)
+        self.fport = 0x06
+        self.frm_payload = None
+        if mtype == MType.JOIN_REQUEST:
+            self.frm_payload = JoinRequestPayload()
+            self.frm_payload.create(args)
+        if mtype == MType.JOIN_ACCEPT:
+            self.frm_payload = JoinAcceptPayload()
+            self.frm_payload.create(args)
+        if mtype == MType.UNCONF_DATA_UP or mtype == MType.UNCONF_DATA_DOWN or\
+                mtype == MType.CONF_DATA_UP or mtype == MType.CONF_DATA_DOWN:
+            self.frm_payload = DataPayload()
+            self.frm_payload.create(args)
 
     def length(self):
         return len(self.to_raw())

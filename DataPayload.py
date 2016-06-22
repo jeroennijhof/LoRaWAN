@@ -7,9 +7,12 @@ import math
 
 class DataPayload:
 
-    def __init__(self, mac_payload, payload):
+    def read(self, mac_payload, payload):
         self.mac_payload = mac_payload
         self.payload = payload
+
+    def create(self, args):
+        return
 
     def length(self):
         return len(self.payload)
@@ -34,7 +37,8 @@ class DataPayload:
         mic += self.mac_payload.to_raw()
 
         cmac = AES_CMAC()
-        return cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
+        computed_mic = cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
+        return map(int, bytearray(computed_mic))
 
     def decrypt_payload(self, key, direction):
         k = int(math.ceil(len(self.payload) / 16.0))
