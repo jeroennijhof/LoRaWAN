@@ -51,7 +51,7 @@ class JoinAcceptPayload:
     def compute_mic(self, key, direction, mhdr):
         mic = []
         mic += self.to_clear_raw()
-        mic += [mhdr]
+        mic += [mhdr.to_raw()]
 
         cmac = AES_CMAC()
         computed_mic = cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]

@@ -1,24 +1,24 @@
-from MType import MType
+from MHDR import MHDR
 
 class Direction:
 
     UP = 0x00
     DOWN = 0x01
-    MTYPE = {
-        MType.JOIN_REQUEST: UP,
-        MType.JOIN_ACCEPT: DOWN,
-        MType.UNCONF_DATA_UP: UP,
-        MType.UNCONF_DATA_DOWN: DOWN,
-        MType.CONF_DATA_UP: UP,
-        MType.CONF_DATA_DOWN: DOWN,
-        MType.RFU: UP,
-        MType.PROPRIETARY: UP }
+    DIRECTION = {
+        MHDR.JOIN_REQUEST: UP,
+        MHDR.JOIN_ACCEPT: DOWN,
+        MHDR.UNCONF_DATA_UP: UP,
+        MHDR.UNCONF_DATA_DOWN: DOWN,
+        MHDR.CONF_DATA_UP: UP,
+        MHDR.CONF_DATA_DOWN: DOWN,
+        MHDR.RFU: UP,
+        MHDR.PROPRIETARY: UP }
 
-    def __init__(self, mtype):
-        self.set(mtype)
+    def __init__(self, mhdr):
+        self.set(mhdr)
 
     def get(self):
         return self.direction
 
-    def set(self, mtype):
-        self.direction = self.MTYPE[mtype]
+    def set(self, mhdr):
+        self.direction = self.DIRECTION[mhdr.get_mtype()]

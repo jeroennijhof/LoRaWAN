@@ -3,7 +3,7 @@
 #
 from MalformedPacketException import MalformedPacketException
 from FHDR import FHDR
-from MType import MType
+from MHDR import MHDR
 from JoinRequestPayload import JoinRequestPayload
 from JoinAcceptPayload import JoinAcceptPayload
 from DataPayload import DataPayload
@@ -18,41 +18,43 @@ class MacPayload:
         self.fhdr.read(mac_payload)
         self.fport = mac_payload[self.fhdr.length()]
         self.frm_payload = None
-        if mtype == MType.JOIN_REQUEST:
+        if mtype == MHDR.JOIN_REQUEST:
             self.frm_payload = JoinRequestPayload()
             self.frm_payload.read(mac_payload[self.fhdr.length() + 1:])
-        if mtype == MType.JOIN_ACCEPT:
+        if mtype == MHDR.JOIN_ACCEPT:
             self.frm_payload = JoinAcceptPayload()
             self.frm_payload.read(mac_payload[self.fhdr.length() + 1:])
-        if mtype == MType.UNCONF_DATA_UP or mtype == MType.UNCONF_DATA_DOWN or\
-                mtype == MType.CONF_DATA_UP or mtype == MType.CONF_DATA_DOWN:
+        if mtype == MHDR.UNCONF_DATA_UP or mtype == MHDR.UNCONF_DATA_DOWN or\
+                mtype == MHDR.CONF_DATA_UP or mtype == MHDR.CONF_DATA_DOWN:
             self.frm_payload = DataPayload()
             self.frm_payload.read(self, mac_payload[self.fhdr.length() + 1:])
 
-    def create(self, mtype, args):
+    def create(self, mtype, key, args):
         self.fhdr = FHDR()
         self.fhdr.create(mtype, args)
-        self.fport = 0x06
+        self.fport = 0x00
         self.frm_payload = None
-        if mtype == MType.JOIN_REQUEST:
+        if mtype == MHDR.JOIN_REQUEST:
             self.frm_payload = JoinRequestPayload()
             self.frm_payload.create(args)
-        if mtype == MType.JOIN_ACCEPT:
+        if mtype == MHDR.JOIN_ACCEPT:
             self.frm_payload = JoinAcceptPayload()
             self.frm_payload.create(args)
-        if mtype == MType.UNCONF_DATA_UP or mtype == MType.UNCONF_DATA_DOWN or\
-                mtype == MType.CONF_DATA_UP or mtype == MType.CONF_DATA_DOWN:
+        if mtype == MHDR.UNCONF_DATA_UP or mtype == MHDR.UNCONF_DATA_DOWN or\
+                mtype == MHDR.CONF_DATA_UP or mtype == MHDR.CONF_DATA_DOWN:
             self.frm_payload = DataPayload()
-            self.frm_payload.create(args)
+            self.frm_payload.create(self, key, args)
 
     def length(self):
         return len(self.to_raw())
 
     def to_raw(self):
         mac_payload = []
-        mac_payload += self.fhdr.to_raw()
+        if self.fhdr.get_devaddr() != [0x00, 0x00, 0x00, 0x00]:
+            mac_payload += self.fhdr.to_raw()
         if self.frm_payload != None:
-            mac_payload += [self.fport]
+            if self.fhdr.get_devaddr() != [0x00, 0x00, 0x00, 0x00]:
+                mac_payload += [self.fport]
             mac_payload += self.frm_payload.to_raw()
         return mac_payload
 

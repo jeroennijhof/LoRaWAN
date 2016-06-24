@@ -11,8 +11,9 @@ class DataPayload:
         self.mac_payload = mac_payload
         self.payload = payload
 
-    def create(self, args):
-        return
+    def create(self, mac_payload, key, args):
+        self.mac_payload = mac_payload
+        self.set_payload(key, 0x00, args['data'])
 
     def length(self):
         return len(self.payload)
@@ -33,7 +34,7 @@ class DataPayload:
         mic += [0x00]
         mic += [0x00]
         mic += [1 + self.mac_payload.length()]
-        mic += [mhdr]
+        mic += [mhdr.to_raw()]
         mic += self.mac_payload.to_raw()
 
         cmac = AES_CMAC()

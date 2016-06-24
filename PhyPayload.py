@@ -2,10 +2,9 @@
 # lorawan packet: mhdr(1) mac_payload(1..N) mic(4)
 #
 from MalformedPacketException import MalformedPacketException
+from MHDR import MHDR
 from Direction import Direction
-from MType import MType
 from MacPayload import MacPayload
-from MajorVersion import MajorVersion
 
 class PhyPayload:
 
@@ -16,37 +15,27 @@ class PhyPayload:
         if len(packet) < 12:
             raise MalformedPacketException("Invalid lorawan packet");
 
-        self.mhdr = packet[0]
-        self.mversion = MajorVersion(self.get_mhdr())
-        self.mtype = MType(self.get_mhdr())
-        self.direction = Direction(self.mtype.get())
+        self.mhdr = MHDR(packet[0])
+        self.set_direction()
         self.mac_payload = MacPayload()
-        self.mac_payload.read(self.mtype.get(), packet[1:-4])
+        self.mac_payload.read(self.get_mhdr().get_mtype(), packet[1:-4])
         self.mic = packet[-4:]
 
-    def create(self, mtype, args):
-        self.mhdr = MajorVersion.LORAWAN_R_1 | (mtype << 5)
-        self.mversion = MajorVersion(self.get_mhdr())
-        self.mtype = MType(self.get_mhdr())
-        self.direction = Direction(self.mtype.get())
+    def create(self, mhdr, args):
+        self.mhdr = MHDR(mhdr)
+        self.set_direction()
         self.mac_payload = MacPayload()
-        self.mac_payload.create(self.mtype.get(), args)
+        self.mac_payload.create(self.get_mhdr().get_mtype(), self.key, args)
         self.mic = None
 
     def length(self):
         return len(self.to_raw())
 
     def to_raw(self):
-        phy_payload = [self.get_mhdr()]
+        phy_payload = [self.get_mhdr().to_raw()]
         phy_payload += self.mac_payload.to_raw()
         phy_payload += self.get_mic()
         return phy_payload
-
-    def get_mtype(self):
-        return self.mtype.get()
-
-    def get_mversion(self):
-        return self.mversion.get()
 
     def get_mhdr(self):
         return self.mhdr;
@@ -58,7 +47,7 @@ class PhyPayload:
         return self.direction.get()
 
     def set_direction(self):
-        self.direction = Direction(self.mtype.get())
+        self.direction = Direction(self.get_mhdr())
 
     def get_mac_payload(self):
         return self.mac_payload
