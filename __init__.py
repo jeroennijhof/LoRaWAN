@@ -1,4 +1,4 @@
-from PhyPayload import PhyPayload
+from .PhyPayload import PhyPayload
 
-def new(key):
-    return PhyPayload(key)
+def new(nwkey,appkey):
+    return PhyPayload(nwkey, appkey)

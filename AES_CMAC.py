@@ -28,23 +28,23 @@ class AES_CMAC:
         return K1, K2
 
     def xor_128(self, N1, N2):
-        J = ''
+        J = b''
         for i in range(len(N1)):
-            J = J + chr(ord(N1[i]) ^ ord(N2[i]))
+            J += bytes([N1[i] ^ N2[i]])
         return J
 
     def pad(self, N):
         const_Bsize = 16
         padLen = 16-len(N)
-        return  N + '\x80' + '\x00'*(padLen-1)
+        return  N + b'\x80' + b'\x00'*(padLen-1)
 
     def encode(self, K, M):
         const_Bsize = 16
-        const_Zero  = '\x00'*16
+        const_Zero  = b'\x00'*16
 
         AES_128= AES.new(K)
         K1, K2 = self.gen_subkey(K)
-        n      = len(M)/const_Bsize
+        n      = int(len(M)/const_Bsize)
 
         if n == 0:
             n = 1

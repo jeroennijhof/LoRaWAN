@@ -1,4 +1,4 @@
-from MalformedPacketException import MalformedPacketException
+from .MalformedPacketException import MalformedPacketException
 
 class MHDR:
 

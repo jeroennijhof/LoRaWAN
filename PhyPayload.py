@@ -1,15 +1,16 @@
 #
 # lorawan packet: mhdr(1) mac_payload(1..N) mic(4)
 #
-from MalformedPacketException import MalformedPacketException
-from MHDR import MHDR
-from Direction import Direction
-from MacPayload import MacPayload
+from .MalformedPacketException import MalformedPacketException
+from .MHDR import MHDR
+from .Direction import Direction
+from .MacPayload import MacPayload
 
 class PhyPayload:
 
-    def __init__(self, key):
-        self.key = key
+    def __init__(self, nwkey, appkey):
+        self.nwkey = nwkey
+        self.appkey = appkey
 
     def read(self, packet):
         if len(packet) < 12:
@@ -25,7 +26,7 @@ class PhyPayload:
         self.mhdr = MHDR(mhdr)
         self.set_direction()
         self.mac_payload = MacPayload()
-        self.mac_payload.create(self.get_mhdr().get_mtype(), self.key, args)
+        self.mac_payload.create(self.get_mhdr().get_mtype(), self.appkey, args)
         self.mic = None
 
     def length(self):
@@ -64,10 +65,10 @@ class PhyPayload:
         self.mic = mic
 
     def compute_mic(self):
-        return self.mac_payload.frm_payload.compute_mic(self.key, self.get_direction(), self.get_mhdr())
+        return self.mac_payload.frm_payload.compute_mic(self.nwkey, self.get_direction(), self.get_mhdr())
 
     def valid_mic(self):
-        return self.get_mic() == self.mac_payload.frm_payload.compute_mic(self.key, self.get_direction(), self.get_mhdr())
+        return self.get_mic() == self.mac_payload.frm_payload.compute_mic(self.nwkey, self.get_direction(), self.get_mhdr())
 
     def get_payload(self):
-        return self.mac_payload.frm_payload.decrypt_payload(self.key, self.get_direction())
+        return self.mac_payload.frm_payload.decrypt_payload(self.appkey, self.get_direction())

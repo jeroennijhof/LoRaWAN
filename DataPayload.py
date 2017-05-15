@@ -1,7 +1,7 @@
 #
 # frm_payload: data(0..N)
 #
-from AES_CMAC import AES_CMAC
+from .AES_CMAC import AES_CMAC
 from Crypto.Cipher import AES
 import math
 
@@ -38,8 +38,8 @@ class DataPayload:
         mic += self.mac_payload.to_raw()
 
         cmac = AES_CMAC()
-        computed_mic = cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
-        return map(int, bytearray(computed_mic))
+        computed_mic = cmac.encode(bytes(key), bytes(mic))[:4]
+        return list(map(int, computed_mic))
 
     def decrypt_payload(self, key, direction):
         k = int(math.ceil(len(self.payload) / 16.0))
@@ -56,8 +56,8 @@ class DataPayload:
             a += [0x00]
             a += [i+1]
 
-        cipher = AES.new(str(bytearray(key)))
-        s = map(ord, cipher.encrypt(str(bytearray(a))))
+        cipher = AES.new(bytes(key))
+        s = cipher.encrypt(bytes(a))
 
         padded_payload = []
         for i in range(k):
@@ -67,7 +67,7 @@ class DataPayload:
         payload = []
         for i in range(len(self.payload)):
             payload += [s[i] ^ padded_payload[i]]
-        return payload
+        return list(map(int, payload))
 
     def encrypt_payload(self, key, direction, data):
         k = int(math.ceil(len(data) / 16.0))
@@ -85,7 +85,7 @@ class DataPayload:
             a += [i+1]
 
         cipher = AES.new(str(bytearray(key)))
-        s = map(ord, cipher.encrypt(str(bytearray(a))))
+        s = list(map(ord, cipher.encrypt(bytes(a))))
 
         padded_payload = []
         for i in range(k):

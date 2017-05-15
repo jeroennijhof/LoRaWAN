@@ -1,7 +1,7 @@
 #
 # frm_payload: appnonce(3) netid(3) devaddr(4) dlsettings(1) rxdelay(1) cflist(0..16)
 #
-from AES_CMAC import AES_CMAC
+from .AES_CMAC import AES_CMAC
 from Crypto.Cipher import AES
 
 class JoinAcceptPayload:

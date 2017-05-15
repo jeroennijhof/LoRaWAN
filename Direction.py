@@ -1,4 +1,4 @@
-from MHDR import MHDR
+from .MHDR import MHDR
 
 class Direction:
 

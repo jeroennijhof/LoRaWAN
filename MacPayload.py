@@ -1,12 +1,12 @@
 #
 # mac_payload: fhdr(7..23) fport(1) frm_payload(0..N)
 #
-from MalformedPacketException import MalformedPacketException
-from FHDR import FHDR
-from MHDR import MHDR
-from JoinRequestPayload import JoinRequestPayload
-from JoinAcceptPayload import JoinAcceptPayload
-from DataPayload import DataPayload
+from .MalformedPacketException import MalformedPacketException
+from .FHDR import FHDR
+from .MHDR import MHDR
+from .JoinRequestPayload import JoinRequestPayload
+from .JoinAcceptPayload import JoinAcceptPayload
+from .DataPayload import DataPayload
 
 class MacPayload:
 

@@ -1,7 +1,7 @@
 #
 # frm_payload: appeui(8) deveui(8) devnonce(2)
 #
-from AES_CMAC import AES_CMAC
+from .AES_CMAC import AES_CMAC
 from Crypto.Cipher import AES
 
 class JoinRequestPayload:
