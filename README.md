@@ -1,6 +1,9 @@
 # LoRaWAN
 This is a LoRaWAN v1.0 implementation in python.
 
+You still need a LoRa driver to actually get or send a packet at radio level.
+Testing has been done with https://github.com/mayeranalytics/pySX127x icw a RFM95 attached to a Raspberry PI.
+
 See: https://www.lora-alliance.org/portals/0/specs/LoRaWAN%20Specification%201R0.pdf
 
 ## Installation
@@ -18,7 +21,7 @@ packet = [0x80,0x8f,0x77,0xbb,0x07,0x00,0x02,0x00,0x06,0xbd,0x33,0x42,0xa1,0x9f,
 
 print("Reading lorawan packet:")
 lorawan = LoRaWAN.new(nwkey, appkey)
-lorawan.read(payload)
+lorawan.read(packet)
 print(lorawan.get_mhdr().get_mversion())
 print(lorawan.get_mhdr().get_mtype())
 print(lorawan.get_mic())
