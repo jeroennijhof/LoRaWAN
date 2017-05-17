@@ -23,7 +23,7 @@ class FHDR:
         self.fopts = []
         if mtype == MHDR.UNCONF_DATA_UP or mtype == MHDR.UNCONF_DATA_DOWN or\
                 mtype == MHDR.CONF_DATA_UP or mtype == MHDR.CONF_DATA_DOWN:
-            self.devaddr = args['devaddr']
+            self.devaddr = list(reversed(args['devaddr']))
 
     def length(self):
         return 4 + 1 + 2 + (self.fctrl & 0xf)

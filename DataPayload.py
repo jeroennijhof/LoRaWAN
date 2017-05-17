@@ -84,8 +84,8 @@ class DataPayload:
             a += [0x00]
             a += [i+1]
 
-        cipher = AES.new(str(bytearray(key)))
-        s = list(map(ord, cipher.encrypt(bytes(a))))
+        cipher = AES.new(bytes(key))
+        s = cipher.encrypt(bytes(a))
 
         padded_payload = []
         for i in range(k):
@@ -95,4 +95,4 @@ class DataPayload:
         payload = []
         for i in range(len(data)):
             payload += [s[i] ^ padded_payload[i]]
-        return payload
+        return list(map(int, payload))
