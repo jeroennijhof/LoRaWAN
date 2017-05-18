@@ -31,6 +31,7 @@ class LoRaWANrcv(LoRa):
         print(lorawan.compute_mic())
         print(lorawan.valid_mic())
         print("".join(list(map(chr, lorawan.get_payload()))))
+        print("\n")
 
         self.set_mode(MODE.SLEEP)
         self.reset_ptr_rx()
