@@ -20,10 +20,10 @@ class MacPayload:
         self.frm_payload = None
         if mtype == MHDR.JOIN_REQUEST:
             self.frm_payload = JoinRequestPayload()
-            self.frm_payload.read(mac_payload[self.fhdr.length() + 1:])
+            self.frm_payload.read(mac_payload)
         if mtype == MHDR.JOIN_ACCEPT:
             self.frm_payload = JoinAcceptPayload()
-            self.frm_payload.read(mac_payload[self.fhdr.length() + 1:])
+            self.frm_payload.read(mac_payload)
         if mtype == MHDR.UNCONF_DATA_UP or mtype == MHDR.UNCONF_DATA_DOWN or\
                 mtype == MHDR.CONF_DATA_UP or mtype == MHDR.CONF_DATA_DOWN:
             self.frm_payload = DataPayload()

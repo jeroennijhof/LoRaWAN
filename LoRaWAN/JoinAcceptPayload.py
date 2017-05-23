@@ -1,25 +1,19 @@
 #
 # frm_payload: appnonce(3) netid(3) devaddr(4) dlsettings(1) rxdelay(1) cflist(0..16)
 #
+from .MalformedPacketException import MalformedPacketException
 from .AES_CMAC import AES_CMAC
 from Crypto.Cipher import AES
 
 class JoinAcceptPayload:
 
-    def __init__(self, payload):
-        if len(payload) < 16:
+    def read(self, payload):
+        if len(payload) < 12:
             raise MalformedPacketException("Invalid join accept");
         self.encrypted_payload = payload
-        self.payload = self.decrypt_payload(payload)
 
-        self.appnonce = self.payload[:3]
-        self.netid = self.payload[3:6]
-        self.devaddr = self.payload[6:10]
-        self.dlsettings = self.payload[10]
-        self.rxdelay = self.payload[11]
-        self.cflist = None
-        if self.payload[12:]:
-            self.cflist = self.payload[12:]
+    def create(self, args):
+        pass
 
     def length(self):
         return len(self.encrypted_payload)
@@ -50,27 +44,56 @@ class JoinAcceptPayload:
 
     def compute_mic(self, key, direction, mhdr):
         mic = []
-        mic += self.to_clear_raw()
         mic += [mhdr.to_raw()]
+        mic += self.to_clear_raw()
 
         cmac = AES_CMAC()
-        computed_mic = cmac.encode(str(bytearray(key)), str(bytearray(mic)))[:4]
-        return map(int, bytearray(computed_mic))
+        computed_mic = cmac.encode(bytes(key), bytes(mic))[:4]
+        return list(map(int, computed_mic))
 
-    def decrypt_payload(self, key, direction):
+    def decrypt_payload(self, key, direction, mic):
         a = []
         a += self.encrypted_payload
-        a += self.mic
+        a += mic
 
-        cipher = AES.new(str(bytearray(key)))
-        s = map(ord, cipher.encrypt(str(bytearray(a))))
-        return s
+        cipher = AES.new(bytes(key))
+        self.payload = cipher.encrypt(bytes(a))[:-4]
 
-    def encrypt_payload(self, key):
+        self.appnonce = self.payload[:3]
+        self.netid = self.payload[3:6]
+        self.devaddr = self.payload[6:10]
+        self.dlsettings = self.payload[10]
+        self.rxdelay = self.payload[11]
+        self.cflist = None
+        if self.payload[12:]:
+            self.cflist = self.payload[12:]
+
+        return list(map(int, self.payload))
+
+    def encrypt_payload(self, key, direction, mhdr):
         a = []
         a += self.to_clear_raw()
-        a += self.compute_mic()
+        a += self.compute_mic(key, direction, mhdr)
 
-        cipher = AES.new(str(bytearray(key)))
-        s = map(ord, cipher.decrypt(str(bytearray(a))))
-        return s[:-4], s[-4:]
+        cipher = AES.new(bytes(key))
+        return list(map(int, cipher.decrypt(bytes(a))))
+
+    def derive_nwkey(self, key, devnonce):
+        a = [0x01]
+        a += self.get_appnonce()
+        a += self.get_netid()
+        a += devnonce
+        a += [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+        cipher = AES.new(bytes(key))
+        return list(map(hex, cipher.encrypt(bytes(a))))
+
+    def derive_appkey(self, key, devnonce):
+        a = [0x02]
+        a += self.get_appnonce()
+        a += self.get_netid()
+        a += devnonce
+        a += [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+        cipher = AES.new(bytes(key))
+        return list(map(hex, cipher.encrypt(bytes(a))))

@@ -41,7 +41,7 @@ class DataPayload:
         computed_mic = cmac.encode(bytes(key), bytes(mic))[:4]
         return list(map(int, computed_mic))
 
-    def decrypt_payload(self, key, direction):
+    def decrypt_payload(self, key, direction, mic):
         k = int(math.ceil(len(self.payload) / 16.0))
 
         a = []

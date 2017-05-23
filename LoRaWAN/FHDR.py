@@ -19,7 +19,10 @@ class FHDR:
     def create(self, mtype, args):
         self.devaddr = [0x00, 0x00, 0x00, 0x00]
         self.fctrl = 0x00
-        self.fcnt = args['fcnt'].to_bytes(2, byteorder='little')
+        if 'fcnt' in args:
+            self.fcnt = args['fcnt'].to_bytes(2, byteorder='little')
+        else:
+            self.fcnt = [0x00, 0x00]
         self.fopts = []
         if mtype == MHDR.UNCONF_DATA_UP or mtype == MHDR.UNCONF_DATA_DOWN or\
                 mtype == MHDR.CONF_DATA_UP or mtype == MHDR.CONF_DATA_DOWN:
