@@ -76,11 +76,17 @@ class PhyPayload:
         else:
             return self.get_mic() == self.mac_payload.frm_payload.compute_mic(self.nwkey, self.get_direction(), self.get_mhdr())
 
+    def get_devaddr(self):
+        if self.get_mhdr().get_mtype() == MHDR.JOIN_ACCEPT:
+            return self.mac_payload.frm_payload.get_devaddr()
+        else:
+            return self.mac_payload.fhdr.get_devaddr()
+
     def get_payload(self):
         return self.mac_payload.frm_payload.decrypt_payload(self.appkey, self.get_direction(), self.mic)
 
-    def derive_nwkey(self, devnonce):
-        return self.mac_payload.frm_payload.derive_nwkey(self.appkey, devnonce)
+    def derive_nwskey(self, devnonce):
+        return self.mac_payload.frm_payload.derive_nwskey(self.appkey, devnonce)
 
-    def derive_appkey(self, devnonce):
-        return self.mac_payload.frm_payload.derive_appkey(self.appkey, devnonce)
+    def derive_appskey(self, devnonce):
+        return self.mac_payload.frm_payload.derive_appskey(self.appkey, devnonce)

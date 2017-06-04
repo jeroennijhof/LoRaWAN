@@ -31,7 +31,7 @@ class JoinAcceptPayload:
         return self.netid
 
     def get_devaddr(self):
-        return self.devaddr
+        return list(map(int, reversed(self.devaddr)))
 
     def get_dlsettings(self):
         return self.dlsettings
@@ -78,7 +78,7 @@ class JoinAcceptPayload:
         cipher = AES.new(bytes(key))
         return list(map(int, cipher.decrypt(bytes(a))))
 
-    def derive_nwkey(self, key, devnonce):
+    def derive_nwskey(self, key, devnonce):
         a = [0x01]
         a += self.get_appnonce()
         a += self.get_netid()
@@ -86,9 +86,9 @@ class JoinAcceptPayload:
         a += [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
         cipher = AES.new(bytes(key))
-        return list(map(hex, cipher.encrypt(bytes(a))))
+        return list(map(int, cipher.encrypt(bytes(a))))
 
-    def derive_appkey(self, key, devnonce):
+    def derive_appskey(self, key, devnonce):
         a = [0x02]
         a += self.get_appnonce()
         a += self.get_netid()
@@ -96,4 +96,4 @@ class JoinAcceptPayload:
         a += [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
         cipher = AES.new(bytes(key))
-        return list(map(hex, cipher.encrypt(bytes(a))))
+        return list(map(int, cipher.encrypt(bytes(a))))
