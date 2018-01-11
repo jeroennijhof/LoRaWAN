@@ -19,25 +19,26 @@
 # You should have received a copy of the GNU General Public License along with pySX127.  If not, see
 # <http://www.gnu.org/licenses/>.
 
-
+#Modified 2018-01-10 Philip Basford to be compatible with the dragino LoRa HAT
 import RPi.GPIO as GPIO
 import spidev
 
 import time
 
 
+
 class BOARD:
     """ Board initialisation/teardown and pin configuration is kept here.
-        This is the Raspberry Pi board with one LED and a modtronix inAir9B
+        This is the Raspberry Pi board with a Dragino LoRa/GPS HAT
     """
     # Note that the BCOM numbering for the GPIOs is used.
-    DIO0 = 22   # RaspPi GPIO 22
+    DIO0 = 4   # RaspPi GPIO 4
     DIO1 = 23   # RaspPi GPIO 23
     DIO2 = 24   # RaspPi GPIO 24
-    DIO3 = 25   # RaspPi GPIO 25
+    DIO3 = 20   # RaspPi GPIO 20
     LED  = 18   # RaspPi GPIO 18 connects to the LED on the proto shield
     SWITCH = 4  # RaspPi GPIO 4 connects to a switch
-
+    SPI_CS = 2  # Chip Select pin to use
     # The spi object is kept here
     spi = None
 
@@ -65,7 +66,7 @@ class BOARD:
         BOARD.spi.close()
 
     @staticmethod
-    def SpiDev(spi_bus=0, spi_cs=0):
+    def SpiDev(spi_bus=0, spi_cs=SPI_CS):
         """ Init and return the SpiDev object
         :return: SpiDev object
         :param spi_bus: The RPi SPI bus to use: 0 or 1

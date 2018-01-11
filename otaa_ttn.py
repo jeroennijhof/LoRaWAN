@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#Original Version Jeroen Nijhof http://www.jeroennijhof.nl
+#Modified 2018-01-10 Philip Basford Various changes to move confidential data
+#Also print statments changed
+
 import sys
 from time import sleep
 from SX127x.LoRa import *
@@ -7,7 +11,7 @@ from SX127x.board_config import BOARD
 import LoRaWAN
 from LoRaWAN.MHDR import MHDR
 from random import randrange
-
+from otaa_config import *
 BOARD.setup()
 parser = LoRaArgumentParser("LoRaWAN sender")
 
@@ -29,10 +33,22 @@ class LoRaWANotaa(LoRa):
         if lorawan.get_mhdr().get_mtype() == MHDR.JOIN_ACCEPT:
             print("Got LoRaWAN join accept")
             print(lorawan.valid_mic())
-            print(lorawan.get_devaddr())
-            print(lorawan.derive_nwskey(devnonce))
-            print(lorawan.derive_appskey(devnonce))
+            devaddr = (lorawan.get_devaddr())
+            print("Device ID: %s" % devaddr)
+            nwskey = lorawan.derive_nwskey(devnonce)
+            appskey = lorawan.derive_appskey(devnonce)
+            print("Network Key: %s" % nwskey)
+            print("Application Key: %s" %appskey)
             print("\n")
+            fcnt = 0
+            while(1):
+                print("Sending message\n")
+                lorawan = LoRaWAN.new(nwskey, appskey)
+                lorawan.create(MHDR.UNCONF_DATA_UP, {'devaddr': devaddr, 'fcnt': fcnt, 'data': list(map(ord, 'Python rules!')) })
+                fcnt += 1
+                self.write_payload(lorawan.to_raw())
+                self.set_mode(MODE.TX)
+                sleep(10)
             sys.exit(0)
 
         print("Got LoRaWAN message continue listen for join accept")
@@ -60,9 +76,6 @@ class LoRaWANotaa(LoRa):
 
 
 # Init
-deveui = [0x00, 0x47, 0x64, 0xB1, 0xAB, 0xC6, 0x4F, 0x7C]
-appeui = [0x70, 0xB3, 0xD5, 0x7E, 0xF0, 0x00, 0x51, 0x34]
-appkey = [0xA1, 0x0F, 0x0E, 0x87, 0x0A, 0x15, 0x58, 0x40, 0x89, 0x73, 0xC0, 0x60, 0x1E, 0x19, 0xC3, 0xD1]
 devnonce = [randrange(256), randrange(256)]
 lora = LoRaWANotaa(False)
 
@@ -76,7 +89,7 @@ lora.set_pa_config(max_power=0x0F, output_power=0x0E)
 lora.set_sync_word(0x34)
 lora.set_rx_crc(True)
 
-print(lora)
+#print(lora)
 assert(lora.get_agc_auto_on() == 1)
 
 try:
