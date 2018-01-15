@@ -117,4 +117,6 @@ class Dragino(LoRa):
         self.logger.debug("Frame count %d", self.frame_count)
         self.frame_count += 1
         self.write_payload(lorawan.to_raw())
+        self.logger.debug("Packet = %s", lorawan.to_raw())
+        self.set_dio_mapping([1, 0, 0, 0, 0, 0])
         self.set_mode(MODE.TX)
