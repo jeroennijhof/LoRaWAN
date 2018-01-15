@@ -18,6 +18,7 @@
 ###############################################################################
 from time import sleep
 from random import randrange
+import logging
 from SX127x.LoRa import LoRa, MODE
 from SX127x.board_config import BOARD
 import LoRaWAN
@@ -31,11 +32,19 @@ OUTPUT_POWER = 0x0E
 SYNC_WORD = 0x34
 RX_CRC = True
 TX_WAIT = 0
+DEFAULT_LOG_LEVEL = logging.DEBUG #Change after finishing development
+
 class Dragino(LoRa):
-    def __init__(self, freqs=LORA_FREQS, sf=DEFAULT_SF, verbose=True):
+    def __init__(self, freqs=LORA_FREQS, sf=DEFAULT_SF,
+            logging_level=DEFAULT_LOG_LEVEL):
+        self.logger = logging.getLogger("Dragino")
+        self.logger.setLevel(logging_level)
+        logging.basicConfig(
+            format='%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
         BOARD.setup()
-        super(Dragino, self).__init__(verbose)
+        super(Dragino, self).__init__(logging_level<logging.INFO)
         self.devnonce = [randrange(256), randrange(256)] #random none
+        self.logger.debug("Nonce = %s", self.devnonce)
         self.freqs = freqs
         self.device_addr = None
         self.network_key = None
@@ -43,9 +52,12 @@ class Dragino(LoRa):
         self.frame_count = 0
         self.set_mode(MODE.SLEEP)
         self.set_dio_mapping([1, 0, 0, 0, 0, 0])
-        self.set_freq(freqs[randrange(len(freqs))]) #Pick a random frequency
+        freq = freqs[randrange(len(freqs))]#Pick a random frequency
+        self.set_freq(freq)
+        self.logger.info("Frequency = %s", freq)
         self.set_pa_config(pa_select=1)
         self.set_spreading_factor(sf)
+        self.logger.info("SF = %s", sf)
         self.set_pa_config(max_power=MAX_POWER, output_power=OUTPUT_POWER)
         self.set_sync_word(SYNC_WORD)
         self.set_rx_crc(RX_CRC)
@@ -54,7 +66,7 @@ class Dragino(LoRa):
 
 
     def on_rx_done(self):
-        print("RX done")
+        self.logger.debug("Recieved message")
         self.clear_irq_flags(RxDone=1)
         payload = self.read_payload(nocheck=True)
         lorawan = LoRaWAN.new([], appkey)
@@ -62,18 +74,18 @@ class Dragino(LoRa):
         lorawan.get_payload()
 #        print(lorawan.get_mhdr().get_mversion())
         if lorawan.get_mhdr().get_mtype() == MHDR.JOIN_ACCEPT:
-            print("Join resp")
+            self.logger.debug("Join resp")
             #It's a response to a join request
-            print(lorawan.valid_mic())
+            lorawan.valid_mic()
             self.device_addr = lorawan.get_devaddr()
-            print("Device: %s"% self.device_addr)
+            self.logger.info("Device: %s", self.device_addr)
             self.network_key = lorawan.derive_nwskey(self.devnonce)
-            print("Network key: %s" % self.network_key)
+            self.logger.info("Network key: %s" , self.network_key)
             self.apps_key = lorawan.derive_appskey(self.devnonce)
-            print("APPS key: %s" % self.apps_key)
+            self.logger.info("APPS key: %s" , self.apps_key)
 
     def on_tx_done(self):
-        print("TX Done")
+        self.logger.debug("TX Complete")
         self.clear_irq_flags(TxDone=1)
         self.set_mode(MODE.STDBY)
         self.set_dio_mapping([0, 0, 0, 0, 0, 0])
@@ -82,7 +94,7 @@ class Dragino(LoRa):
         self.set_mode(MODE.RXCONT)
 
     def join(self):
-        print("running join")
+        self.logger.debug("Performing Join")
         self.frame_count = 1
         lorawan = LoRaWAN.new(appkey)
         lorawan.create(
@@ -91,7 +103,6 @@ class Dragino(LoRa):
         self.write_payload(lorawan.to_raw())
         self.set_mode(MODE.TX)
         sleep(TX_WAIT)
-        print("Join method finished")
 
     def registered(self):
         return self.device_addr is not None
@@ -103,6 +114,7 @@ class Dragino(LoRa):
             {'devaddr': self.device_addr,
              'fcnt': self.frame_count,
              'data': list(map(ord, str(message)))})
+        self.logger.debug("Frame count %d", self.frame_count)
         self.frame_count += 1
         self.write_payload(lorawan.to_raw())
         self.set_mode(MODE.TX)
