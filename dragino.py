@@ -23,7 +23,6 @@ from SX127x.LoRa import LoRa, MODE
 from SX127x.board_config import BOARD
 import LoRaWAN
 from LoRaWAN.MHDR import MHDR
-from otaa_config import *
 from FrequncyPlan import LORA_FREQS
 
 DEFAULT_SF = 7
@@ -69,7 +68,7 @@ class Dragino(LoRa):
         self.logger.debug("Recieved message")
         self.clear_irq_flags(RxDone=1)
         payload = self.read_payload(nocheck=True)
-        lorawan = LoRaWAN.new([], appkey)
+        lorawan = LoRaWAN.new([], self.appkey)
         lorawan.read(payload)
         lorawan.get_payload()
 #        print(lorawan.get_mhdr().get_mversion())
@@ -93,8 +92,14 @@ class Dragino(LoRa):
         self.reset_ptr_rx()
         self.set_mode(MODE.RXCONT)
 
-    def join(self):
+    def join(self, appkey, appeui, deveui):
         self.logger.debug("Performing Join")
+        self.logger.info("App key = %s", appkey)
+        self.logger.info("App eui = %s", appeui)
+        self.logger.info("Dev eui = %s", deveui)
+        self.appkey = appkey
+        self.appeui = appeui
+        self.deveui = deveui
         self.frame_count = 1
         lorawan = LoRaWAN.new(appkey)
         lorawan.create(
