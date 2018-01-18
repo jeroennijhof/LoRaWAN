@@ -18,12 +18,15 @@
 ###############################################################################
 from time import sleep
 from random import randrange
+from datetime import datetime, timedelta
 import logging
+from serial import Serial
 from SX127x.LoRa import LoRa, MODE
 from SX127x.board_config import BOARD
 import LoRaWAN
 from LoRaWAN.MHDR import MHDR
 from FrequncyPlan import LORA_FREQS
+import pynmea2
 
 DEFAULT_SF = 7
 MAX_POWER = 0x0F
@@ -32,16 +35,22 @@ SYNC_WORD = 0x34
 RX_CRC = True
 TX_WAIT = 0
 DEFAULT_LOG_LEVEL = logging.DEBUG #Change after finishing development
-
+DEFAULT_BAUD_RATE = 9600
+DEFAULT_SERIAL_PORT = "/dev/serial0"
+DEFAULT_SERIAL_TIMEOUT = 1 # How long to timeout on reading a line
+DEFAULT_WAIT_PERIOD = 10 # How long to wait to get a GPS position
 class Dragino(LoRa):
     def __init__(self, freqs=LORA_FREQS, sf=DEFAULT_SF,
-            logging_level=DEFAULT_LOG_LEVEL):
+            logging_level=DEFAULT_LOG_LEVEL,
+            gps_baud_rate=DEFAULT_BAUD_RATE,
+            gps_serial_port=DEFAULT_SERIAL_PORT,
+            gps_serial_timeout=DEFAULT_SERIAL_TIMEOUT):
         self.logger = logging.getLogger("Dragino")
         self.logger.setLevel(logging_level)
         logging.basicConfig(
             format='%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
         BOARD.setup()
-        super(Dragino, self).__init__(logging_level<logging.INFO)
+        super(Dragino, self).__init__(logging_level < logging.INFO)
         self.devnonce = [randrange(256), randrange(256)] #random none
         self.logger.debug("Nonce = %s", self.devnonce)
         self.freqs = freqs
@@ -60,7 +69,8 @@ class Dragino(LoRa):
         self.set_pa_config(max_power=MAX_POWER, output_power=OUTPUT_POWER)
         self.set_sync_word(SYNC_WORD)
         self.set_rx_crc(RX_CRC)
-        assert(self.get_agc_auto_on() == 1)
+        assert self.get_agc_auto_on() == 1
+        self.gps_serial = Serial(gps_serial_port, gps_baud_rate, timeout=gps_serial_timeout)
 
 
 
@@ -79,9 +89,9 @@ class Dragino(LoRa):
             self.device_addr = lorawan.get_devaddr()
             self.logger.info("Device: %s", self.device_addr)
             self.network_key = lorawan.derive_nwskey(self.devnonce)
-            self.logger.info("Network key: %s" , self.network_key)
+            self.logger.info("Network key: %s", self.network_key)
             self.apps_key = lorawan.derive_appskey(self.devnonce)
-            self.logger.info("APPS key: %s" , self.apps_key)
+            self.logger.info("APPS key: %s", self.apps_key)
 
     def on_tx_done(self):
         self.logger.debug("TX Complete")
@@ -125,3 +135,19 @@ class Dragino(LoRa):
         self.logger.debug("Packet = %s", lorawan.to_raw())
         self.set_dio_mapping([1, 0, 0, 0, 0, 0])
         self.set_mode(MODE.TX)
+
+
+    def get_gps(self, wait_period=DEFAULT_WAIT_PERIOD):
+        start = datetime.utcnow()
+        end = start + timedelta(seconds=wait_period)
+        self.logger.info("Waiting for %d seconds until %s", wait_period, end)
+        msg = None
+
+        while datetime.utcnow() < end:
+            gps_data = self.gps_serial.readline().decode() # read the serial port, convert to a string 
+            gps_data_arr = gps_data.split(",")
+            if gps_data[0] == "$GPGGA": #It's a position string
+                print(gps_data)
+                msg = pynmea2.parse(gps_data)
+                break
+        return msg # this will be None if no message is decoded, otherwise it'll contain the information
