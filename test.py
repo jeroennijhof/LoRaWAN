@@ -13,4 +13,5 @@ while not D.registered():
 #sleep(10)
 for i in range(0,5):
     D.send("Hello World")
+    print("Sent message")
     sleep(10)
