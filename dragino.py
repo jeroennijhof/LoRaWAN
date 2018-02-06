@@ -122,6 +122,20 @@ class Dragino(LoRa):
     def registered(self):
         return self.device_addr is not None
 
+    def send_bytes(self, message):
+        lorawan = LoRaWAN.new(self.network_key, self.apps_key)
+        lorawan.create(
+            MHDR.UNCONF_DATA_UP,
+            {'devaddr': self.device_addr,
+             'fcnt': self.frame_count,
+             'data': message})
+        self.logger.debug("Frame count %d", self.frame_count)
+        self.frame_count += 1
+        self.write_payload(lorawan.to_raw())
+        self.logger.debug("Packet = %s", lorawan.to_raw())
+        self.set_dio_mapping([1, 0, 0, 0, 0, 0])
+        self.set_mode(MODE.TX)
+    
     def send(self, message):
         lorawan = LoRaWAN.new(self.network_key, self.apps_key)
         lorawan.create(
