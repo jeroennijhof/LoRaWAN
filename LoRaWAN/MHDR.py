@@ -21,7 +21,7 @@ class MHDR:
         self.mhdr = mhdr
         mversion = mhdr & self.MHDR_MAJOR
         if mversion != self.LORAWAN_V1:
-            raise MalformedPacketException("Invalid major version")
+            raise MalformedPacketException("Invalid major version %d", mversion)
 
     def to_raw(self):
         return self.mhdr
