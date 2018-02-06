@@ -7,7 +7,7 @@ import logging
 import dragino
 from otaa_config import * 
 
-PER_MESSAGE_WAIT = 3600 #How long to wait between messages (seconds)
+PER_MESSAGE_WAIT = 600 #How long to wait between messages (seconds)
 GPIO.setwarnings(False)
 
 LOGGER = logging.getLogger("LoRaHAT Test")
@@ -21,10 +21,12 @@ while not D.registered():
     LOGGER.info("Waiting")
     sleep(2)
 LOGGER.info("Connected")
+count = 0
 while True:
     try:
         D.send(datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
-        LOGGER.info("Sent message")
+        LOGGER.info("Sent message %d", count)
+        count += 1
     except Exception as e:
         LOGGER.error(str(e))
     sleep(PER_MESSAGE_WAIT)
