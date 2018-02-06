@@ -39,12 +39,15 @@ DEFAULT_BAUD_RATE = 9600
 DEFAULT_SERIAL_PORT = "/dev/serial0"
 DEFAULT_SERIAL_TIMEOUT = 1 # How long to timeout on reading a line
 DEFAULT_WAIT_PERIOD = 10 # How long to wait to get a GPS position
+DEFAULT_RETRIES = 3 # How many attempts to send the message
+
 class Dragino(LoRa):
     def __init__(self, freqs=LORA_FREQS, sf=DEFAULT_SF,
             logging_level=DEFAULT_LOG_LEVEL,
             gps_baud_rate=DEFAULT_BAUD_RATE,
             gps_serial_port=DEFAULT_SERIAL_PORT,
-            gps_serial_timeout=DEFAULT_SERIAL_TIMEOUT):
+            gps_serial_timeout=DEFAULT_SERIAL_TIMEOUT,
+            lora_retries = DEFAULT_RETRIES):
         self.logger = logging.getLogger("Dragino")
         self.logger.setLevel(logging_level)
         logging.basicConfig(
@@ -57,6 +60,7 @@ class Dragino(LoRa):
         self.device_addr = None
         self.network_key = None
         self.apps_key = None
+        self.lora_retries = lora_retries
         self.frame_count = 0
         self.set_mode(MODE.SLEEP)
         self.set_dio_mapping([1, 0, 0, 0, 0, 0])
@@ -123,18 +127,30 @@ class Dragino(LoRa):
         return self.device_addr is not None
 
     def send_bytes(self, message):
-        lorawan = LoRaWAN.new(self.network_key, self.apps_key)
-        lorawan.create(
-            MHDR.UNCONF_DATA_UP,
-            {'devaddr': self.device_addr,
-             'fcnt': self.frame_count,
-             'data': message})
-        self.logger.debug("Frame count %d", self.frame_count)
-        self.frame_count += 1
-        self.write_payload(lorawan.to_raw())
-        self.logger.debug("Packet = %s", lorawan.to_raw())
-        self.set_dio_mapping([1, 0, 0, 0, 0, 0])
-        self.set_mode(MODE.TX)
+        attempt = 1
+        while attempt <= self.lora_retries:
+            try:
+                lorawan = LoRaWAN.new(self.network_key, self.apps_key)
+                lorawan.create(
+                    MHDR.UNCONF_DATA_UP,
+                    {'devaddr': self.device_addr,
+                     'fcnt': self.frame_count,
+                     'data': message})
+                self.logger.debug("Frame count %d", self.frame_count)
+                self.frame_count += 1
+                self.write_payload(lorawan.to_raw())
+                self.logger.debug("Packet = %s", lorawan.to_raw())
+                self.set_dio_mapping([1, 0, 0, 0, 0, 0])
+                self.set_mode(MODE.TX)
+                self.logger.info(
+                    "Succeeded on attempt %d/%d", attempt, self.lora_retries)
+                return
+            except LoRaWAN.MalformedPacketException as e:
+                self.logger.error(e)
+            except KeyError as e:
+                self.logger.error(e)
+            finally:
+                attempt +=1
     
     def send(self, message):
         self.send_bytes(list(map(ord, str(message))))
