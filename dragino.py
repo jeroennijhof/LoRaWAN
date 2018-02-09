@@ -106,6 +106,15 @@ class Dragino(LoRa):
         self.reset_ptr_rx()
         self.set_mode(MODE.RXCONT)
 
+    def set_abp(self, dev_addr, nwkey, appkey):
+            self.frame_count = 1
+            self.device_addr = dev_addr
+            self.logger.info("Device: %s", self.device_addr)
+            self.network_key = nwkey
+            self.logger.info("Network key: %s", self.network_key)
+            self.apps_key = appkey
+            self.logger.info("APPS key: %s", self.apps_key)
+
     def join(self, appkey, appeui, deveui):
         self.logger.debug("Performing Join")
         self.logger.info("App key = %s", appkey)
