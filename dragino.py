@@ -128,6 +128,8 @@ class Dragino(LoRa):
 
     def send_bytes(self, message):
         attempt = 1
+        if self.network_key is None or self.apps_key is None:
+            raise DraginoError("No network and/or apps key")
         while attempt <= self.lora_retries:
             try:
                 lorawan = LoRaWAN.new(self.network_key, self.apps_key)
@@ -169,3 +171,9 @@ class Dragino(LoRa):
                 msg = pynmea2.parse(gps_data)
                 break
         return msg # this will be None if no message is decoded, otherwise it'll contain the information
+
+class DraginoError(Exception):
+    """
+        Error class for dragino class
+    """
+    pass
