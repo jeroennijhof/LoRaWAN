@@ -16,11 +16,11 @@
 #You should have received a copy of the GNU Affero General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ###############################################################################
-from time import sleep
 from random import randrange
 from datetime import datetime, timedelta
 import logging
 import os.path
+from configobj import ConfigObj
 from serial import Serial
 from SX127x.LoRa import LoRa, MODE
 from SX127x.board_config import BOARD
@@ -28,7 +28,6 @@ import LoRaWAN
 from LoRaWAN.MHDR import MHDR
 from FrequncyPlan import LORA_FREQS
 import pynmea2
-
 DEFAULT_SF = 7
 MAX_POWER = 0x0F
 OUTPUT_POWER = 0x0E
@@ -42,6 +41,8 @@ DEFAULT_WAIT_PERIOD = 10 # How long to wait to get a GPS position
 DEFAULT_RETRIES = 3 # How many attempts to send the message
 DEFAULT_COUNT_FILENAME = ".lora_fcount"
 
+AUTH_ABP = "ABP"
+AUTH_OTTA = "OTTA"
 class Dragino(LoRa):
     def __init__(
             self, freqs=LORA_FREQS, sf=DEFAULT_SF,
@@ -87,7 +88,7 @@ class Dragino(LoRa):
 
     def _read_frame_count(self):
         if not os.path.isfile(self.fcount_filename):
-            self.logger.warn("No frame count file available")
+            self.logger.warning("No frame count file available")
             self.frame_count = 1
         else:
             self.logger.info("Reading Frame count from: %s", self.fcount_filename)
@@ -219,3 +220,60 @@ class DraginoError(Exception):
         Error class for dragino class
     """
     pass
+
+class DraginoConfig(object):
+    def __init__(self, config_file, log_level=DEFAULT_LOG_LEVEL):
+        self.logger = logging.getLogger("DraginoConfig")
+        logging.basicConfig(
+            format='%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
+        self.logger.setLevel(log_level)
+        try:
+            config = ConfigObj(config_file)
+            self.gps_baud_rate = int(config["gps_baud_rate"])
+            self.gps_serial_port = config["gps_serial_port"]
+            self.gps_serial_timeout = int(config["gps_serial_timeout"])
+            self.spreading_factor = int(config["spreading_factor"])
+            self.max_power = int(config["max_power"], 16)
+            self.output_power = int(config["output_power"], 16)
+            self.sync_word = int(config["sync_word"], 16)
+            self.rx_crc = bool(config["rx_crc"])
+            auth = config["auth_mode"]
+            if auth.upper() == "ABP":
+                self.logger.info("Using ABP mode")
+                self.auth = AUTH_ABP
+                self.devaddr = config["devaddr"]
+                self.nwskey = config["nwskey"]
+                self.appskey = config["appskey"]
+            elif auth.upper() == "OTAA":
+                self.logger.info("Using OTAA mode")
+                self.auth = AUTH_OTTA
+                self.deveui = config["deveui"]
+                self.appeui = config["appeui"]
+                self.appkey = config["appkey"]
+            else:
+                self.logger.critical("Unsupported auth mode chosen: %s", auth)
+                raise DraginoError("Unsupported auth mode")
+            self.logger.debug("GPS Baud Rate: %d", self.gps_baud_rate)
+            self.logger.debug("GPS Serial Port: %s", self.gps_serial_port)
+            self.logger.debug("GPS Serial Timeout: %s", self.gps_serial_timeout)
+            self.logger.debug("Spreading factoer: %d", self.spreading_factor)
+            self.logger.debug("Max Power: %02X", self.max_power)
+            self.logger.debug("Output Power: %02X", self.output_power)
+            self.logger.debug("Sync Word: %02X", self.sync_word)
+            self.logger.debug("RX CRC: %s", str(self.rx_crc))
+            self.logger.debug("Auth mode: %s", self.auth)
+            if self.auth == AUTH_ABP:
+                self.logger.debug("Device Address: %s", str(self.devaddr))
+                self.logger.debug("Network Session Key: %s", str(self.nwskey))
+                self.logger.debug("App Session Key: %s", str(self.appskey))
+            elif self.auth == AUTH_OTTA:
+                self.logger.debug("Device EUI: %s", str(self.deveui))
+                self.logger.debug("App EUI: %s", str(self.appeui))
+                self.logger.debug("App Key: %s", str(self.appkey))
+
+        except KeyError as err:
+            self.logger.critical("Missing required field %s", str(err))
+            raise DraginoError(err)
+        except ValueError as err:
+            self.logger.critical("Unable to parse number %s", str(err))
+            raise DraginoError(err)
