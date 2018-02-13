@@ -10,6 +10,8 @@ max_power = "0x0F"
 output_power = "0x0E"
 sync_word = 0x34
 rx_crc = True
+#Where to store the frame count
+fcount_filename = ".lora_fcount"
 
 ##Valid auth modes are ABP or OTAA
 ##All values are hex arrays eg devaddr = [0x01, 0x02, 0x03, 0x04]

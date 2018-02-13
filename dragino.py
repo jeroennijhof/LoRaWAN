@@ -237,6 +237,7 @@ class DraginoConfig(object):
             self.output_power = int(config["output_power"], 16)
             self.sync_word = int(config["sync_word"], 16)
             self.rx_crc = bool(config["rx_crc"])
+            self.fcount_filename = config["fcount_filename"]
             auth = config["auth_mode"]
             if auth.upper() == "ABP":
                 self.logger.info("Using ABP mode")
@@ -261,6 +262,7 @@ class DraginoConfig(object):
             self.logger.debug("Output Power: %02X", self.output_power)
             self.logger.debug("Sync Word: %02X", self.sync_word)
             self.logger.debug("RX CRC: %s", str(self.rx_crc))
+            self.logger.debug("Frame Count Filename: %s", self.fcount_filename)
             self.logger.debug("Auth mode: %s", self.auth)
             if self.auth == AUTH_ABP:
                 self.logger.debug("Device Address: %s", str(self.devaddr))
