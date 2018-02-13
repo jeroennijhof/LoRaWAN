@@ -34,7 +34,6 @@ MAX_POWER = 0x0F
 OUTPUT_POWER = 0x0E
 SYNC_WORD = 0x34
 RX_CRC = True
-TX_WAIT = 0
 DEFAULT_LOG_LEVEL = logging.INFO #Change after finishing development
 DEFAULT_BAUD_RATE = 9600
 DEFAULT_SERIAL_PORT = "/dev/serial0"
@@ -162,7 +161,6 @@ class Dragino(LoRa):
             {'deveui': deveui, 'appeui': appeui, 'devnonce': self.devnonce})
         self.write_payload(lorawan.to_raw())
         self.set_mode(MODE.TX)
-        sleep(TX_WAIT)
 
     def registered(self):
         return self.device_addr is not None
