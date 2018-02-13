@@ -20,6 +20,7 @@ from time import sleep
 from random import randrange
 from datetime import datetime, timedelta
 import logging
+import os.path
 from serial import Serial
 from SX127x.LoRa import LoRa, MODE
 from SX127x.board_config import BOARD
@@ -40,14 +41,17 @@ DEFAULT_SERIAL_PORT = "/dev/serial0"
 DEFAULT_SERIAL_TIMEOUT = 1 # How long to timeout on reading a line
 DEFAULT_WAIT_PERIOD = 10 # How long to wait to get a GPS position
 DEFAULT_RETRIES = 3 # How many attempts to send the message
+DEFAULT_COUNT_FILENAME = ".lora_fcount"
 
 class Dragino(LoRa):
-    def __init__(self, freqs=LORA_FREQS, sf=DEFAULT_SF,
+    def __init__(
+            self, freqs=LORA_FREQS, sf=DEFAULT_SF,
             logging_level=DEFAULT_LOG_LEVEL,
             gps_baud_rate=DEFAULT_BAUD_RATE,
             gps_serial_port=DEFAULT_SERIAL_PORT,
             gps_serial_timeout=DEFAULT_SERIAL_TIMEOUT,
-            lora_retries = DEFAULT_RETRIES):
+            lora_retries=DEFAULT_RETRIES,
+            lora_fcount_filename=DEFAULT_COUNT_FILENAME):
         self.logger = logging.getLogger("Dragino")
         self.logger.setLevel(logging_level)
         logging.basicConfig(
@@ -75,8 +79,38 @@ class Dragino(LoRa):
         self.set_rx_crc(RX_CRC)
         assert self.get_agc_auto_on() == 1
         self.gps_serial = Serial(gps_serial_port, gps_baud_rate, timeout=gps_serial_timeout)
+        self.fcount_filename = lora_fcount_filename
+        self._read_frame_count()
+        self.appkey = None
+        self.appeui = None
+        self.deveui = None
 
 
+    def _read_frame_count(self):
+        if not os.path.isfile(self.fcount_filename):
+            self.logger.warn("No frame count file available")
+            self.frame_count = 1
+        else:
+            self.logger.info("Reading Frame count from: %s", self.fcount_filename)
+            try:
+                with open(self.fcount_filename, "r") as f_handle:
+                    self.frame_count = int(f_handle.readline())
+                    self.logger.info("Frame count = %d", self.frame_count)
+            except (IOError, ValueError) as exp:
+                self.logger.error("Unable to open fcount file. Resettting count")
+                self.logger.error(str(exp))
+                self.frame_count = 1
+
+    def _save_frame_count(self):
+        try:
+            with open(self.fcount_filename, "w") as f_handle:
+                f_handle.write('%d\n' % self.frame_count)
+                f_handle.close()
+                self.logger.debug(
+                    "Frame count %d saved to %s",
+                    self.frame_count, self.fcount_filename)
+        except IOError as err:
+            self.logger.error("Unable to save frame count: %s", str(err))
 
     def on_rx_done(self):
         self.logger.debug("Recieved message")
@@ -107,13 +141,12 @@ class Dragino(LoRa):
         self.set_mode(MODE.RXCONT)
 
     def set_abp(self, dev_addr, nwkey, appkey):
-            self.frame_count = 1
-            self.device_addr = dev_addr
-            self.logger.info("Device: %s", self.device_addr)
-            self.network_key = nwkey
-            self.logger.info("Network key: %s", self.network_key)
-            self.apps_key = appkey
-            self.logger.info("APPS key: %s", self.apps_key)
+        self.device_addr = dev_addr
+        self.logger.info("Device: %s", self.device_addr)
+        self.network_key = nwkey
+        self.logger.info("Network key: %s", self.network_key)
+        self.apps_key = appkey
+        self.logger.info("APPS key: %s", self.apps_key)
 
     def join(self, appkey, appeui, deveui):
         self.logger.debug("Performing Join")
@@ -123,7 +156,6 @@ class Dragino(LoRa):
         self.appkey = appkey
         self.appeui = appeui
         self.deveui = deveui
-        self.frame_count = 1
         lorawan = LoRaWAN.new(appkey)
         lorawan.create(
             MHDR.JOIN_REQUEST,
@@ -149,6 +181,7 @@ class Dragino(LoRa):
                      'data': message})
                 self.logger.debug("Frame count %d", self.frame_count)
                 self.frame_count += 1
+                self._save_frame_count()
                 self.write_payload(lorawan.to_raw())
                 self.logger.debug("Packet = %s", lorawan.to_raw())
                 self.set_dio_mapping([1, 0, 0, 0, 0, 0])
@@ -156,13 +189,13 @@ class Dragino(LoRa):
                 self.logger.info(
                     "Succeeded on attempt %d/%d", attempt, self.lora_retries)
                 return
-            except LoRaWAN.MalformedPacketException as e:
-                self.logger.error(e)
-            except KeyError as e:
-                self.logger.error(e)
+            except LoRaWAN.MalformedPacketException as exp:
+                self.logger.error(exp)
+            except KeyError as err:
+                self.logger.error(err)
             finally:
-                attempt +=1
-    
+                attempt += 1
+
     def send(self, message):
         self.send_bytes(list(map(ord, str(message))))
 
@@ -173,13 +206,15 @@ class Dragino(LoRa):
         msg = None
 
         while datetime.utcnow() < end:
-            gps_data = self.gps_serial.readline().decode() # read the serial port, convert to a string 
+            # read the serial port, convert to a string
+            gps_data = self.gps_serial.readline().decode()
             gps_data_arr = gps_data.split(",")
-            if gps_data[0] == "$GPGGA": #It's a position string
+            if gps_data_arr[0] == "$GPGGA": #It's a position string
                 print(gps_data)
                 msg = pynmea2.parse(gps_data)
                 break
-        return msg # this will be None if no message is decoded, otherwise it'll contain the information
+        # this will be None if no message is decoded, otherwise it'll contain the information
+        return msg
 
 class DraginoError(Exception):
     """
