@@ -14,13 +14,13 @@ rx_crc = True
 fcount_filename = ".lora_fcount"
 
 ##Valid auth modes are ABP or OTAA
-##All values are hex arrays eg devaddr = [0x01, 0x02, 0x03, 0x04]
+##All values are hex arrays eg devaddr = 0x01, 0x02, 0x03, 0x04
 auth_mode = "abp"
-devaddr = []
-nwskey = []
-appskey = []
+devaddr = 
+nwskey = 
+appskey =
 
 #auth_mode = "otaa"
-#deveui = []
-#appeui = []
-#appkey = []
+#deveui =
+#appeui =
+#appkey =

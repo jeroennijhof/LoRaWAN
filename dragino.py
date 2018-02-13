@@ -28,72 +28,71 @@ import LoRaWAN
 from LoRaWAN.MHDR import MHDR
 from FrequncyPlan import LORA_FREQS
 import pynmea2
-DEFAULT_SF = 7
-MAX_POWER = 0x0F
-OUTPUT_POWER = 0x0E
-SYNC_WORD = 0x34
-RX_CRC = True
+
 DEFAULT_LOG_LEVEL = logging.INFO #Change after finishing development
-DEFAULT_BAUD_RATE = 9600
-DEFAULT_SERIAL_PORT = "/dev/serial0"
-DEFAULT_SERIAL_TIMEOUT = 1 # How long to timeout on reading a line
-DEFAULT_WAIT_PERIOD = 10 # How long to wait to get a GPS position
 DEFAULT_RETRIES = 3 # How many attempts to send the message
-DEFAULT_COUNT_FILENAME = ".lora_fcount"
 
 AUTH_ABP = "ABP"
 AUTH_OTTA = "OTTA"
+
 class Dragino(LoRa):
     def __init__(
-            self, freqs=LORA_FREQS, sf=DEFAULT_SF,
+            self, config_filename, freqs=LORA_FREQS,
             logging_level=DEFAULT_LOG_LEVEL,
-            gps_baud_rate=DEFAULT_BAUD_RATE,
-            gps_serial_port=DEFAULT_SERIAL_PORT,
-            gps_serial_timeout=DEFAULT_SERIAL_TIMEOUT,
-            lora_retries=DEFAULT_RETRIES,
-            lora_fcount_filename=DEFAULT_COUNT_FILENAME):
+            lora_retries=DEFAULT_RETRIES):
         self.logger = logging.getLogger("Dragino")
         self.logger.setLevel(logging_level)
         logging.basicConfig(
             format='%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
         BOARD.setup()
         super(Dragino, self).__init__(logging_level < logging.INFO)
-        self.devnonce = [randrange(256), randrange(256)] #random none
+        self.devnonce = [randrange(256), randrange(256)] #random nonce
         self.logger.debug("Nonce = %s", self.devnonce)
         self.freqs = freqs
+        #Set all auth method tockens to None as not sure what auth method we'll use
         self.device_addr = None
         self.network_key = None
         self.apps_key = None
+        self.appkey = None
+        self.appeui = None
+        self.deveui = None
+        self.config = DraginoConfig(config_filename, logging_level)
         self.lora_retries = lora_retries
-        self.frame_count = 0
+        self._read_frame_count()
         self.set_mode(MODE.SLEEP)
         self.set_dio_mapping([1, 0, 0, 0, 0, 0])
         freq = freqs[randrange(len(freqs))]#Pick a random frequency
         self.set_freq(freq)
         self.logger.info("Frequency = %s", freq)
         self.set_pa_config(pa_select=1)
-        self.set_spreading_factor(sf)
-        self.logger.info("SF = %s", sf)
-        self.set_pa_config(max_power=MAX_POWER, output_power=OUTPUT_POWER)
-        self.set_sync_word(SYNC_WORD)
-        self.set_rx_crc(RX_CRC)
+        self.set_spreading_factor(self.config.spreading_factor)
+        self.set_pa_config(
+            max_power=self.config.max_power,
+            output_power=self.config.output_power)
+        self.set_sync_word(self.config.sync_word)
+        self.set_rx_crc(self.config.rx_crc)
+        if self.config.auth == AUTH_ABP:
+            self.device_addr = self.config.devaddr
+            self.network_key = self.config.nwskey
+            self.apps_key = self.config.appskey
+        elif self.config.auth == AUTH_OTTA:
+            self.appeui = self.config.appeui
+            self.deveui = self.config.deveui
+            self.appkey = self.config.appkey
         assert self.get_agc_auto_on() == 1
-        self.gps_serial = Serial(gps_serial_port, gps_baud_rate, timeout=gps_serial_timeout)
-        self.fcount_filename = lora_fcount_filename
-        self._read_frame_count()
-        self.appkey = None
-        self.appeui = None
-        self.deveui = None
-
+        self.gps_serial = Serial(
+            self.config.gps_serial_port,
+            self.config.gps_baud_rate,
+            timeout=self.config.gps_serial_timeout)
 
     def _read_frame_count(self):
-        if not os.path.isfile(self.fcount_filename):
+        if not os.path.isfile(self.config.fcount_filename):
             self.logger.warning("No frame count file available")
             self.frame_count = 1
         else:
-            self.logger.info("Reading Frame count from: %s", self.fcount_filename)
+            self.logger.info("Reading Frame count from: %s", self.config.fcount_filename)
             try:
-                with open(self.fcount_filename, "r") as f_handle:
+                with open(self.config.fcount_filename, "r") as f_handle:
                     self.frame_count = int(f_handle.readline())
                     self.logger.info("Frame count = %d", self.frame_count)
             except (IOError, ValueError) as exp:
@@ -103,12 +102,12 @@ class Dragino(LoRa):
 
     def _save_frame_count(self):
         try:
-            with open(self.fcount_filename, "w") as f_handle:
+            with open(self.config.fcount_filename, "w") as f_handle:
                 f_handle.write('%d\n' % self.frame_count)
                 f_handle.close()
                 self.logger.debug(
                     "Frame count %d saved to %s",
-                    self.frame_count, self.fcount_filename)
+                    self.frame_count, self.config.fcount_filename)
         except IOError as err:
             self.logger.error("Unable to save frame count: %s", str(err))
 
@@ -140,28 +139,27 @@ class Dragino(LoRa):
         self.reset_ptr_rx()
         self.set_mode(MODE.RXCONT)
 
-    def set_abp(self, dev_addr, nwkey, appkey):
-        self.device_addr = dev_addr
-        self.logger.info("Device: %s", self.device_addr)
-        self.network_key = nwkey
-        self.logger.info("Network key: %s", self.network_key)
-        self.apps_key = appkey
-        self.logger.info("APPS key: %s", self.apps_key)
 
-    def join(self, appkey, appeui, deveui):
-        self.logger.debug("Performing Join")
-        self.logger.info("App key = %s", appkey)
-        self.logger.info("App eui = %s", appeui)
-        self.logger.info("Dev eui = %s", deveui)
-        self.appkey = appkey
-        self.appeui = appeui
-        self.deveui = deveui
-        lorawan = LoRaWAN.new(appkey)
-        lorawan.create(
-            MHDR.JOIN_REQUEST,
-            {'deveui': deveui, 'appeui': appeui, 'devnonce': self.devnonce})
-        self.write_payload(lorawan.to_raw())
-        self.set_mode(MODE.TX)
+    def join(self):
+        if self.config.auth == AUTH_ABP:
+            self.logger.info("Using ABP no need to Join")
+        elif self.config.auth == AUTH_OTTA:
+            self.logger.debug("Performing OTTA Join")
+            appkey = self.appkey
+            appeui = self.appeui
+            deveui = self.deveui
+            self.logger.info("App key = %s", appkey)
+            self.logger.info("App eui = %s", appeui)
+            self.logger.info("Dev eui = %s", deveui)
+            lorawan = LoRaWAN.new(appkey)
+            lorawan.create(
+                MHDR.JOIN_REQUEST,
+                {'deveui': deveui, 'appeui': appeui, 'devnonce': self.devnonce})
+            self.write_payload(lorawan.to_raw())
+            self.set_mode(MODE.TX)
+        else:
+            self.logger.error("Unknown auth mode")
+            return
 
     def registered(self):
         return self.device_addr is not None
@@ -198,10 +196,11 @@ class Dragino(LoRa):
     def send(self, message):
         self.send_bytes(list(map(ord, str(message))))
 
-    def get_gps(self, wait_period=DEFAULT_WAIT_PERIOD):
+    def get_gps(self):
         start = datetime.utcnow()
-        end = start + timedelta(seconds=wait_period)
-        self.logger.info("Waiting for %d seconds until %s", wait_period, end)
+        end = start + timedelta(seconds=self.config.gps_wait_period)
+        self.logger.info(
+            "Waiting for %d seconds until %s", self.config.gps_wait_period, end)
         msg = None
 
         while datetime.utcnow() < end:
@@ -232,6 +231,7 @@ class DraginoConfig(object):
             self.gps_baud_rate = int(config["gps_baud_rate"])
             self.gps_serial_port = config["gps_serial_port"]
             self.gps_serial_timeout = int(config["gps_serial_timeout"])
+            self.gps_wait_period = int(config["gps_wait_period"])
             self.spreading_factor = int(config["spreading_factor"])
             self.max_power = int(config["max_power"], 16)
             self.output_power = int(config["output_power"], 16)
@@ -242,22 +242,23 @@ class DraginoConfig(object):
             if auth.upper() == "ABP":
                 self.logger.info("Using ABP mode")
                 self.auth = AUTH_ABP
-                self.devaddr = config["devaddr"]
-                self.nwskey = config["nwskey"]
-                self.appskey = config["appskey"]
+                self.devaddr = self._convert_array(config["devaddr"])
+                self.nwskey = self._convert_array(config["nwskey"])
+                self.appskey = self._convert_array(config["appskey"])
             elif auth.upper() == "OTAA":
                 self.logger.info("Using OTAA mode")
                 self.auth = AUTH_OTTA
-                self.deveui = config["deveui"]
-                self.appeui = config["appeui"]
-                self.appkey = config["appkey"]
+                self.deveui = self._convert_array(config["deveui"])
+                self.appeui = self._convert_array(config["appeui"])
+                self.appkey = self._convert_array(config["appkey"])
             else:
                 self.logger.critical("Unsupported auth mode chosen: %s", auth)
                 raise DraginoError("Unsupported auth mode")
             self.logger.debug("GPS Baud Rate: %d", self.gps_baud_rate)
             self.logger.debug("GPS Serial Port: %s", self.gps_serial_port)
             self.logger.debug("GPS Serial Timeout: %s", self.gps_serial_timeout)
-            self.logger.debug("Spreading factoer: %d", self.spreading_factor)
+            self.logger.debug("GPS Wait Period: %d", self.gps_wait_period)
+            self.logger.debug("Spreading factor: %d", self.spreading_factor)
             self.logger.debug("Max Power: %02X", self.max_power)
             self.logger.debug("Output Power: %02X", self.output_power)
             self.logger.debug("Sync Word: %02X", self.sync_word)
@@ -272,10 +273,17 @@ class DraginoConfig(object):
                 self.logger.debug("Device EUI: %s", str(self.deveui))
                 self.logger.debug("App EUI: %s", str(self.appeui))
                 self.logger.debug("App Key: %s", str(self.appkey))
-
         except KeyError as err:
             self.logger.critical("Missing required field %s", str(err))
             raise DraginoError(err)
         except ValueError as err:
             self.logger.critical("Unable to parse number %s", str(err))
             raise DraginoError(err)
+
+    def _convert_array(self, arr):
+        new_arr = []
+        for item in arr:
+            new_arr.append(int(item, 16))
+        self.logger.debug("Converted %d/%d items", len(new_arr), len(arr))
+        return new_arr
+

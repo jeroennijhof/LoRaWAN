@@ -2,11 +2,12 @@
 from time import sleep
 import RPi.GPIO as GPIO
 import dragino
+import logging
 from otaa_config import * 
 GPIO.setwarnings(False)
 
-D = dragino.Dragino()
-D.join(appkey, appeui, deveui)
+D = dragino.Dragino("dragino.ini", logging_level=logging.DEBUG)
+D.join()
 while not D.registered():
     print("Waiting")
     sleep(2)
@@ -14,4 +15,4 @@ while not D.registered():
 for i in range(0,5):
     D.send("Hello World")
     print("Sent message")
-    sleep(10)
+    sleep(1)
