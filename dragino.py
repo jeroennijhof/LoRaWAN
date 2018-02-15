@@ -25,6 +25,7 @@ from serial import Serial
 from SX127x.LoRa import LoRa, MODE
 from SX127x.board_config import BOARD
 import LoRaWAN
+from LoRaWAN import MalformedPacketException
 from LoRaWAN.MHDR import MHDR
 from FrequncyPlan import LORA_FREQS
 import pynmea2
@@ -36,10 +37,16 @@ AUTH_ABP = "ABP"
 AUTH_OTTA = "OTTA"
 
 class Dragino(LoRa):
+    """
+        Class to provide an interface to the dragino LoRa/GPS HAT
+    """
     def __init__(
             self, config_filename, freqs=LORA_FREQS,
             logging_level=DEFAULT_LOG_LEVEL,
             lora_retries=DEFAULT_RETRIES):
+        """
+            Create the class to interface with the board
+        """
         self.logger = logging.getLogger("Dragino")
         self.logger.setLevel(logging_level)
         logging.basicConfig(
@@ -86,6 +93,9 @@ class Dragino(LoRa):
             timeout=self.config.gps_serial_timeout)
 
     def _read_frame_count(self):
+        """
+            Read the frame count from file - if no file present assume it's 1
+        """
         if not os.path.isfile(self.config.fcount_filename):
             self.logger.warning("No frame count file available")
             self.frame_count = 1
@@ -101,6 +111,10 @@ class Dragino(LoRa):
                 self.frame_count = 1
 
     def _save_frame_count(self):
+        """
+            Saves the frame count out to file so that check in ttn can be enabled
+            If the file doesn't exist then create it
+        """
         try:
             with open(self.config.fcount_filename, "w") as f_handle:
                 f_handle.write('%d\n' % self.frame_count)
@@ -112,6 +126,9 @@ class Dragino(LoRa):
             self.logger.error("Unable to save frame count: %s", str(err))
 
     def on_rx_done(self):
+        """
+            Callback on RX complete, signalled by I/O
+        """
         self.logger.debug("Recieved message")
         self.clear_irq_flags(RxDone=1)
         payload = self.read_payload(nocheck=True)
@@ -131,6 +148,9 @@ class Dragino(LoRa):
             self.logger.info("APPS key: %s", self.apps_key)
 
     def on_tx_done(self):
+        """
+            Callback on TX complete is signaled using I/O
+        """
         self.logger.debug("TX Complete")
         self.clear_irq_flags(TxDone=1)
         self.set_mode(MODE.STDBY)
@@ -141,6 +161,9 @@ class Dragino(LoRa):
 
 
     def join(self):
+        """
+            Perform the OTAA auth in order to get the keys requried to transmit
+        """
         if self.config.auth == AUTH_ABP:
             self.logger.info("Using ABP no need to Join")
         elif self.config.auth == AUTH_OTTA:
@@ -162,14 +185,22 @@ class Dragino(LoRa):
             return
 
     def registered(self):
+        """
+            Returns true if either ABP is used for auth, in which case registration
+            is hardcoded, otherwise check that join has been run
+        """
         return self.device_addr is not None
 
     def send_bytes(self, message):
-        attempt = 1
-        if self.network_key is None or self.apps_key is None:
+        """
+            Send a list of bytes over the LoRaWAN channel
+        """
+        attempt = 0
+        if self.network_key is None or self.apps_key is None: # either using ABP / join has  run
             raise DraginoError("No network and/or apps key")
-        while attempt <= self.lora_retries:
-            try:
+        while attempt <= self.lora_retries: # try a couple of times because of
+            attempt += 1 #  intermittent malformed packets nasty hack
+            try: #shouldn't be needed
                 lorawan = LoRaWAN.new(self.network_key, self.apps_key)
                 lorawan.create(
                     MHDR.UNCONF_DATA_UP,
@@ -186,17 +217,25 @@ class Dragino(LoRa):
                 self.logger.info(
                     "Succeeded on attempt %d/%d", attempt, self.lora_retries)
                 return
-            except LoRaWAN.MalformedPacketException as exp:
+            except ValueError as err:
+                self.logger.error(str(err))
+                raise DraginoError(str(err)) from None
+            except MalformedPacketException as exp:
                 self.logger.error(exp)
             except KeyError as err:
                 self.logger.error(err)
-            finally:
-                attempt += 1
 
     def send(self, message):
+        """
+            Send a string over the channel
+        """
         self.send_bytes(list(map(ord, str(message))))
 
     def get_gps(self):
+        """
+            Get the GPS position from the dragino,
+            waits for the specified timeout and then gives up
+        """
         start = datetime.utcnow()
         end = start + timedelta(seconds=self.config.gps_wait_period)
         self.logger.info(
@@ -221,7 +260,13 @@ class DraginoError(Exception):
     pass
 
 class DraginoConfig(object):
+    """
+        Reads an ini file containing the configuration for the dragino board
+    """
     def __init__(self, config_file, log_level=DEFAULT_LOG_LEVEL):
+        """
+            Read in the config and create the object
+        """
         self.logger = logging.getLogger("DraginoConfig")
         logging.basicConfig(
             format='%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
@@ -275,15 +320,17 @@ class DraginoConfig(object):
                 self.logger.debug("App Key: %s", str(self.appkey))
         except KeyError as err:
             self.logger.critical("Missing required field %s", str(err))
-            raise DraginoError(err)
+            raise DraginoError(err) from None
         except ValueError as err:
             self.logger.critical("Unable to parse number %s", str(err))
-            raise DraginoError(err)
+            raise DraginoError(err) from None
 
     def _convert_array(self, arr):
+        """
+            Takes an array of hex strings and converts them into integers
+        """
         new_arr = []
         for item in arr:
             new_arr.append(int(item, 16))
         self.logger.debug("Converted %d/%d items", len(new_arr), len(arr))
         return new_arr
-
