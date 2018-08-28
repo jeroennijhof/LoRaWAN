@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
+!/usr/bin/env python3
+
 from time import sleep
 import RPi.GPIO as GPIO
 import dragino
 import logging
-from otaa_config import * 
+
 GPIO.setwarnings(False)
 
 D = dragino.Dragino("dragino.ini", logging_level=logging.DEBUG)
