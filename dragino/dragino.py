@@ -22,12 +22,12 @@ import logging
 import os.path
 from configobj import ConfigObj
 from serial import Serial
-from SX127x.LoRa import LoRa, MODE
-from SX127x.board_config import BOARD
-import LoRaWAN
-from LoRaWAN import MalformedPacketException
-from LoRaWAN.MHDR import MHDR
-from FrequncyPlan import LORA_FREQS
+from .SX127x.LoRa import LoRa, MODE
+from .SX127x.board_config import BOARD
+from .LoRaWAN import new as lorawan_msg
+from .LoRaWAN import MalformedPacketException
+from .LoRaWAN.MHDR import MHDR
+from .FrequncyPlan import LORA_FREQS
 import pynmea2
 
 DEFAULT_LOG_LEVEL = logging.INFO #Change after finishing development
@@ -132,7 +132,7 @@ class Dragino(LoRa):
         self.logger.debug("Recieved message")
         self.clear_irq_flags(RxDone=1)
         payload = self.read_payload(nocheck=True)
-        lorawan = LoRaWAN.new([], self.appkey)
+        lorawan = lorawan_msg([], self.appkey)
         lorawan.read(payload)
         lorawan.get_payload()
 #        print(lorawan.get_mhdr().get_mversion())
@@ -174,7 +174,7 @@ class Dragino(LoRa):
             self.logger.info("App key = %s", appkey)
             self.logger.info("App eui = %s", appeui)
             self.logger.info("Dev eui = %s", deveui)
-            lorawan = LoRaWAN.new(appkey)
+            lorawan =lorawan_msg(appkey)
             lorawan.create(
                 MHDR.JOIN_REQUEST,
                 {'deveui': deveui, 'appeui': appeui, 'devnonce': self.devnonce})
@@ -201,7 +201,7 @@ class Dragino(LoRa):
         while attempt <= self.lora_retries: # try a couple of times because of
             attempt += 1 #  intermittent malformed packets nasty hack
             try: #shouldn't be needed
-                lorawan = LoRaWAN.new(self.network_key, self.apps_key)
+                lorawan = lorawan_msg(self.network_key, self.apps_key)
                 lorawan.create(
                     MHDR.UNCONF_DATA_UP,
                     {'devaddr': self.device_addr,

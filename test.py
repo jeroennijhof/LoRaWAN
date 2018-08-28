@@ -2,12 +2,12 @@
 
 from time import sleep
 import RPi.GPIO as GPIO
-import dragino
+from dragino import Dragino
 import logging
 
 GPIO.setwarnings(False)
 
-D = dragino.Dragino("dragino.ini", logging_level=logging.DEBUG)
+D = Dragino("dragino.ini", logging_level=logging.DEBUG)
 D.join()
 while not D.registered():
     print("Waiting")
