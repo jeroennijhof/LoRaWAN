@@ -91,6 +91,7 @@ class Dragino(LoRa):
             self.config.gps_serial_port,
             self.config.gps_baud_rate,
             timeout=self.config.gps_serial_timeout)
+        self.gps_serial.flush()
 
     def _read_frame_count(self):
         """
@@ -243,11 +244,15 @@ class Dragino(LoRa):
         msg = None
 
         while datetime.utcnow() < end:
-            # read the serial port, convert to a string
-            gps_data = self.gps_serial.readline().decode()
+            try:
+                # read the serial port, convert to a string
+                gps_data = self.gps_serial.readline().decode()
+            except UnicodeDecodeError:
+                #not yet got valid data from gps
+                continue
             gps_data_arr = gps_data.split(",")
             if gps_data_arr[0] == "$GPGGA": #It's a position string
-                print(gps_data)
+                #print(gps_data)
                 msg = pynmea2.parse(gps_data)
                 break
         # this will be None if no message is decoded, otherwise it'll contain the information
