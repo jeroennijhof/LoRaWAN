@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-###############################################################################
-#Basic interface for dragino LoRa/GPS HAT
-#Copyright (C) 2018 Philip Basford
+"""
+Basic interface for dragino LoRa/GPS HAT
+Copyright (C) 2018 Philip Basford
 
-#This program is free software: you can redistribute it and/or modify
-#it under the terms of the GNU Affero General Public License as
-#published by the Free Software Foundation, either version 3 of the
-#License, or (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
 
-#This program is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#GNU Affero General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
 
-#You should have received a copy of the GNU Affero General Public License
-#along with this program.  If not, see <https://www.gnu.org/licenses/>.
-###############################################################################
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
 from random import randrange
 from datetime import datetime, timedelta
 import logging
@@ -174,7 +174,7 @@ class Dragino(LoRa):
             self.logger.info("App key = %s", appkey)
             self.logger.info("App eui = %s", appeui)
             self.logger.info("Dev eui = %s", deveui)
-            lorawan =lorawan_msg(appkey)
+            lorawan = lorawan_msg(appkey)
             lorawan.create(
                 MHDR.JOIN_REQUEST,
                 {'deveui': deveui, 'appeui': appeui, 'devnonce': self.devnonce})
