@@ -5,7 +5,7 @@ It uses https://github.com/mayeranalytics/pySX127x.
 
 See: https://www.lora-alliance.org/portals/0/specs/LoRaWAN%20Specification%201R0.pdf
 
-##Hardware Needed
+## Hardware Needed
 * Raspberry Pi
 * SD card
 * LoRa/GPS HAT
