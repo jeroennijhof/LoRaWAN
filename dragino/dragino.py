@@ -22,13 +22,13 @@ import logging
 import os.path
 from configobj import ConfigObj
 from serial import Serial
+import pynmea2
 from .SX127x.LoRa import LoRa, MODE
 from .SX127x.board_config import BOARD
 from .LoRaWAN import new as lorawan_msg
 from .LoRaWAN import MalformedPacketException
 from .LoRaWAN.MHDR import MHDR
 from .FrequncyPlan import LORA_FREQS
-import pynmea2
 
 DEFAULT_LOG_LEVEL = logging.INFO #Change after finishing development
 DEFAULT_RETRIES = 3 # How many attempts to send the message
