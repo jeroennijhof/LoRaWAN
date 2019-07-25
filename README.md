@@ -17,7 +17,7 @@ See: https://www.lora-alliance.org/portals/0/specs/LoRaWAN%20Specification%201R0
 4. Install the required packages `sudo apt install device-tree-compiler git python3-crypto python3-nmea2 python3-rpi.gpio python3-serial python3-spidev python3-configobj`
 5. Download the git repo `git clone https://github.com/computenodes/LoRaWAN.git`
 6. Enable additional CS lines (See section below for explanation)
-    1. Change into the overlay directory `cd LoRaWAN/overlay`
+    1. Change into the overlay directory `cd dragino/overlay`
     2. Compile the overlay `dtc -@ -I dts -O dtb -o spi-gpio-cs.dtbo spi-gpio-cs-overlay.dts`.  This might generate a couple of warnings, but seems to work ok
     3. Copy the output file to the required folder `sudo cp spi-gpio-cs.dtbo /boot/overlays/`
     4. Enable the overlay at next reboot `echo "dtoverlay=spi-gpio-cs" | sudo tee -a /boot/config.txt`
