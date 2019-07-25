@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="dragino",
-    version="0.0.2",
+    version="0.0.3",
     author="Philip Basford",
     author_email="P.J.Basford@soton.ac.uk",
     description="A wrapper for the dragino LoRa/GPS HAT",
