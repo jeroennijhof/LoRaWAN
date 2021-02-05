@@ -34,7 +34,7 @@ DEFAULT_LOG_LEVEL = logging.WARN #Change after finishing development
 DEFAULT_RETRIES = 3 # How many attempts to send the message
 
 AUTH_ABP = "ABP"
-AUTH_OTTA = "OTTA"
+AUTH_OTAA = "OTAA"
 
 class Dragino(LoRa):
     """
@@ -82,7 +82,7 @@ class Dragino(LoRa):
             self.device_addr = self.config.devaddr
             self.network_key = self.config.nwskey
             self.apps_key = self.config.appskey
-        elif self.config.auth == AUTH_OTTA:
+        elif self.config.auth == AUTH_OTAA:
             self.appeui = self.config.appeui
             self.deveui = self.config.deveui
             self.appkey = self.config.appkey
@@ -167,8 +167,8 @@ class Dragino(LoRa):
         """
         if self.config.auth == AUTH_ABP:
             self.logger.info("Using ABP no need to Join")
-        elif self.config.auth == AUTH_OTTA:
-            self.logger.debug("Performing OTTA Join")
+        elif self.config.auth == AUTH_OTAA:
+            self.logger.debug("Performing OTAA Join")
             appkey = self.appkey
             appeui = self.appeui
             deveui = self.deveui
@@ -297,7 +297,7 @@ class DraginoConfig(object):
                 self.appskey = self._convert_array(config["appskey"])
             elif auth.upper() == "OTAA":
                 self.logger.info("Using OTAA mode")
-                self.auth = AUTH_OTTA
+                self.auth = AUTH_OTAA
                 self.deveui = self._convert_array(config["deveui"])
                 self.appeui = self._convert_array(config["appeui"])
                 self.appkey = self._convert_array(config["appkey"])
@@ -319,7 +319,7 @@ class DraginoConfig(object):
                 self.logger.debug("Device Address: %s", str(self.devaddr))
                 self.logger.debug("Network Session Key: %s", str(self.nwskey))
                 self.logger.debug("App Session Key: %s", str(self.appskey))
-            elif self.auth == AUTH_OTTA:
+            elif self.auth == AUTH_OTAA:
                 self.logger.debug("Device EUI: %s", str(self.deveui))
                 self.logger.debug("App EUI: %s", str(self.appeui))
                 self.logger.debug("App Key: %s", str(self.appkey))
