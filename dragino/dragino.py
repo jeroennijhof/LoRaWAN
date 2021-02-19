@@ -30,6 +30,7 @@ from .LoRaWAN import MalformedPacketException
 from .LoRaWAN.MHDR import MHDR
 from .FrequncyPlan import LORA_FREQS
 
+
 DEFAULT_LOG_LEVEL = logging.WARN #Change after finishing development
 DEFAULT_RETRIES = 3 # How many attempts to send the message
 
@@ -316,13 +317,13 @@ class DraginoConfig(object):
             self.logger.debug("Frame Count Filename: %s", self.fcount_filename)
             self.logger.debug("Auth mode: %s", self.auth)
             if self.auth == AUTH_ABP:
-                self.logger.debug("Device Address: %s", str(self.devaddr))
-                self.logger.debug("Network Session Key: %s", str(self.nwskey))
-                self.logger.debug("App Session Key: %s", str(self.appskey))
+                self.logger.debug("Device Address: %s", " ".join('{:02X}'.format(x) for x in self.devaddr))
+                self.logger.debug("Network Session Key: %s", " ".join('{:02X}'.format(x) for x in self.nwskey))
+                self.logger.debug("App Session Key: %s", " ".join('{:02X}'.format(x) for x in self.appskey))
             elif self.auth == AUTH_OTAA:
-                self.logger.debug("Device EUI: %s", str(self.deveui))
-                self.logger.debug("App EUI: %s", str(self.appeui))
-                self.logger.debug("App Key: %s", str(self.appkey))
+                self.logger.debug("Device EUI: %s", " ".join('{:02X}'.format(x) for x in self.deveui))
+                self.logger.debug("App EUI: %s", " ".join('{:02X}'.format(x) for x in self.appeui))
+                self.logger.debug("App Key: %s", " ".join('{:02X}'.format(x) for x in self.appkey))
         except KeyError as err:
             self.logger.critical("Missing required field %s", str(err))
             raise DraginoError(err) from None
