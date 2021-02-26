@@ -128,6 +128,10 @@ class Dragino(LoRa):
             self.logger.info("Network key: %s", self.network_key)
             self.apps_key = lorawan.derive_appskey(self.devnonce)
             self.logger.info("APPS key: %s", self.apps_key)
+            self.frame_count = 1
+            self.config.save_credentials(
+                self.device_addr, self.network_key,
+                self.apps_key, self.frame_count)
 
     def on_tx_done(self):
         """
@@ -288,7 +292,7 @@ class DraginoConfig():
                     self.devaddr = self._convert_array(config["devaddr"])
                     self.nwskey = self._convert_array(config["nwskey"])
                     self.appskey = self._convert_array(config["appskey"])
-                except KeyError:
+                except (KeyError, ValueError):
                     self.logger.warning("Unable to read session details")
                     self.devaddr = None
                     self.nwskey = None
@@ -349,8 +353,15 @@ class DraginoConfig():
         if self.auth == AUTH_OTAA: #have session params to save
             self._config["appskey"] = self.appskey
             self._config["devaddr"] = self.devaddr
-            self._config["nswkey"] = self.nwskey
+            self._config["nwkskey"] = self.nwskey
         self._config.write()
+
+    def save_credentials(self, devaddr, nwskey, appskey, fcount):
+        self.devaddr = devaddr
+        self.nwskey = nwskey
+        self.appskey = appskey
+        self.fcount = fcount
+        self.save()
 
     def save_fcount(self, fcount):
         self.logger.debug("Saving fcount")
