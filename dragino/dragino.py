@@ -98,34 +98,14 @@ class Dragino(LoRa):
         """
             Read the frame count from file - if no file present assume it's 1
         """
-        if not os.path.isfile(self.config.fcount_filename):
-            self.logger.warning("No frame count file available")
-            self.frame_count = 1
-        else:
-            self.logger.info("Reading Frame count from: %s", self.config.fcount_filename)
-            try:
-                with open(self.config.fcount_filename, "r") as f_handle:
-                    self.frame_count = int(f_handle.readline())
-                    self.logger.info("Frame count = %d", self.frame_count)
-            except (IOError, ValueError) as exp:
-                self.logger.error("Unable to open fcount file. Resettting count")
-                self.logger.error(str(exp))
-                self.frame_count = 1
+        self.frame_count = self.config.get_fcount()
 
     def _save_frame_count(self):
         """
             Saves the frame count out to file so that check in ttn can be enabled
             If the file doesn't exist then create it
         """
-        try:
-            with open(self.config.fcount_filename, "w") as f_handle:
-                f_handle.write('%d\n' % self.frame_count)
-                f_handle.close()
-                self.logger.debug(
-                    "Frame count %d saved to %s",
-                    self.frame_count, self.config.fcount_filename)
-        except IOError as err:
-            self.logger.error("Unable to save frame count: %s", str(err))
+        self.config.save_fcount(self.frame_count)
 
     def on_rx_done(self):
         """
@@ -211,13 +191,13 @@ class Dragino(LoRa):
                      'data': message})
                 self.logger.debug("Frame count %d", self.frame_count)
                 self.frame_count += 1
-                self._save_frame_count()
                 self.write_payload(lorawan.to_raw())
                 self.logger.debug("Packet = %s", lorawan.to_raw())
                 self.set_dio_mapping([1, 0, 0, 0, 0, 0])
                 self.set_mode(MODE.TX)
                 self.logger.info(
                     "Succeeded on attempt %d/%d", attempt, self.lora_retries)
+                self._save_frame_count()
                 return
             except ValueError as err:
                 self.logger.error(str(err))
@@ -263,9 +243,8 @@ class DraginoError(Exception):
     """
         Error class for dragino class
     """
-    pass
 
-class DraginoConfig(object):
+class DraginoConfig():
     """
         Reads an ini file containing the configuration for the dragino board
     """
@@ -274,11 +253,14 @@ class DraginoConfig(object):
             Read in the config and create the object
         """
         self.logger = logging.getLogger("DraginoConfig")
+        self._config_file = config_file
         logging.basicConfig(
             format='%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
         self.logger.setLevel(log_level)
         try:
             config = ConfigObj(config_file)
+            self._config = config
+            self._config.filename = config_file
             self.gps_baud_rate = int(config["gps_baud_rate"])
             self.gps_serial_port = config["gps_serial_port"]
             self.gps_serial_timeout = int(config["gps_serial_timeout"])
@@ -302,9 +284,23 @@ class DraginoConfig(object):
                 self.deveui = self._convert_array(config["deveui"])
                 self.appeui = self._convert_array(config["appeui"])
                 self.appkey = self._convert_array(config["appkey"])
+                try:
+                    self.devaddr = self._convert_array(config["devaddr"])
+                    self.nwskey = self._convert_array(config["nwskey"])
+                    self.appskey = self._convert_array(config["appskey"])
+                except KeyError:
+                    self.logger.warning("Unable to read session details")
+                    self.devaddr = None
+                    self.nwskey = None
+                    self.appskey = None
             else:
                 self.logger.critical("Unsupported auth mode chosen: %s", auth)
                 raise DraginoError("Unsupported auth mode")
+            try:
+                self.fcount = config["fcount"]
+            except KeyError:
+                self.fcount = self._read_legacy_fcount() #load from previos file
+                self.save()
             self.logger.debug("GPS Baud Rate: %d", self.gps_baud_rate)
             self.logger.debug("GPS Serial Port: %s", self.gps_serial_port)
             self.logger.debug("GPS Serial Timeout: %s", self.gps_serial_timeout)
@@ -317,19 +313,66 @@ class DraginoConfig(object):
             self.logger.debug("Frame Count Filename: %s", self.fcount_filename)
             self.logger.debug("Auth mode: %s", self.auth)
             if self.auth == AUTH_ABP:
-                self.logger.debug("Device Address: %s", " ".join('{:02X}'.format(x) for x in self.devaddr))
-                self.logger.debug("Network Session Key: %s", " ".join('{:02X}'.format(x) for x in self.nwskey))
-                self.logger.debug("App Session Key: %s", " ".join('{:02X}'.format(x) for x in self.appskey))
+                self.logger.debug(
+                    "Device Address: %s", " ".join(
+                        '{:02X}'.format(x) for x in self.devaddr))
+                self.logger.debug(
+                    "Network Session Key: %s", " ".join(
+                        '{:02X}'.format(x) for x in self.nwskey))
+                self.logger.debug(
+                    "App Session Key: %s", " ".join(
+                        '{:02X}'.format(x) for x in self.appskey))
             elif self.auth == AUTH_OTAA:
-                self.logger.debug("Device EUI: %s", " ".join('{:02X}'.format(x) for x in self.deveui))
-                self.logger.debug("App EUI: %s", " ".join('{:02X}'.format(x) for x in self.appeui))
-                self.logger.debug("App Key: %s", " ".join('{:02X}'.format(x) for x in self.appkey))
+                self.logger.debug(
+                    "Device EUI: %s", " ".join(
+                        '{:02X}'.format(x) for x in self.deveui))
+                self.logger.debug(
+                    "App EUI: %s", " ".join(
+                        '{:02X}'.format(x) for x in self.appeui))
+                self.logger.debug(
+                    "App Key: %s", " ".join(
+                        '{:02X}'.format(x) for x in self.appkey))
         except KeyError as err:
             self.logger.critical("Missing required field %s", str(err))
             raise DraginoError(err) from None
         except ValueError as err:
             self.logger.critical("Unable to parse number %s", str(err))
             raise DraginoError(err) from None
+
+
+    def save(self):
+        """
+            save back out to file - need to update the object with the parameters
+            that can legitimately have changed
+        """
+        self._config["fcount"] = self.fcount
+        if self.auth == AUTH_OTAA: #have session params to save
+            self._config["appskey"] = self.appskey
+            self._config["devaddr"] = self.devaddr
+            self._config["nswkey"] = self.nwskey
+        self._config.write()
+
+    def save_fcount(self, fcount):
+        self.logger.debug("Saving fcount")
+        self.fcount = fcount
+        self.save()
+
+    def get_fcount(self):
+        return self.fcount
+
+    def _read_legacy_fcount(self):
+        fname = self._config["fcount_filename"]
+        if not os.path.isfile(fname):
+            self.logger.warning("No frame count file available")
+            return 1
+        self.logger.info("Reading Frame count from: %s", fname)
+        try:
+            with open(fname, "r") as f_handle:
+                return int(f_handle.readline())
+        except (IOError, ValueError) as exp:
+            self.logger.error("Unable to open fcount file. Resettting count")
+            self.logger.error(str(exp))
+            return 1
 
     def _convert_array(self, arr):
         """
