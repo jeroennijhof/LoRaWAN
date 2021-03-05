@@ -129,9 +129,6 @@ class Dragino(LoRa):
             self.apps_key = lorawan.derive_appskey(self.devnonce)
             self.logger.info("APPS key: %s", self.apps_key)
             self.frame_count = 1
-            self.logger.debug(type(self.device_addr))
-            self.logger.debug(type(self.network_key))
-            self.logger.debug(type(self.apps_key))
             self.config.save_credentials(
                 self.device_addr, self.network_key,
                 self.apps_key, self.frame_count)
@@ -160,9 +157,7 @@ class Dragino(LoRa):
                 self.logger.info("Using cached details")
                 self.logger.debug(self.config.devaddr)
                 self.device_addr = self.config.devaddr
-                self.logger.debug(type(self.config.nwkskey))
                 self.network_key = self.config.nwkskey
-                self.logger.debug(type(self.config.appskey))
                 self.apps_key = self.config.appskey
             else:
                 self.logger.debug("Performing OTAA Join")
