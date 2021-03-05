@@ -129,6 +129,9 @@ class Dragino(LoRa):
             self.apps_key = lorawan.derive_appskey(self.devnonce)
             self.logger.info("APPS key: %s", self.apps_key)
             self.frame_count = 1
+            self.logger.debug(type(self.device_addr))
+            self.logger.debug(type(self.network_key))
+            self.logger.debug(type(self.apps_key))
             self.config.save_credentials(
                 self.device_addr, self.network_key,
                 self.apps_key, self.frame_count)
@@ -153,19 +156,28 @@ class Dragino(LoRa):
         if self.config.auth == AUTH_ABP:
             self.logger.info("Using ABP no need to Join")
         elif self.config.auth == AUTH_OTAA:
-            self.logger.debug("Performing OTAA Join")
-            appkey = self.appkey
-            appeui = self.appeui
-            deveui = self.deveui
-            self.logger.info("App key = %s", appkey)
-            self.logger.info("App eui = %s", appeui)
-            self.logger.info("Dev eui = %s", deveui)
-            lorawan = lorawan_msg(appkey)
-            lorawan.create(
-                MHDR.JOIN_REQUEST,
-                {'deveui': deveui, 'appeui': appeui, 'devnonce': self.devnonce})
-            self.write_payload(lorawan.to_raw())
-            self.set_mode(MODE.TX)
+            if self.config.joined():
+                self.logger.info("Using cached details")
+                self.logger.debug(self.config.devaddr)
+                self.device_addr = self.config.devaddr
+                self.logger.debug(type(self.config.nwkskey))
+                self.network_key = self.config.nwkskey
+                self.logger.debug(type(self.config.appskey))
+                self.apps_key = self.config.appskey
+            else:
+                self.logger.debug("Performing OTAA Join")
+                appkey = self.appkey
+                appeui = self.appeui
+                deveui = self.deveui
+                self.logger.info("App key = %s", appkey)
+                self.logger.info("App eui = %s", appeui)
+                self.logger.info("Dev eui = %s", deveui)
+                lorawan = lorawan_msg(appkey)
+                lorawan.create(
+                    MHDR.JOIN_REQUEST,
+                    {'deveui': deveui, 'appeui': appeui, 'devnonce': self.devnonce})
+                self.write_payload(lorawan.to_raw())
+                self.set_mode(MODE.TX)
         else:
             self.logger.error("Unknown auth mode")
             return
@@ -289,19 +301,19 @@ class DraginoConfig():
                 self.appeui = self._convert_array(config["appeui"])
                 self.appkey = self._convert_array(config["appkey"])
                 try:
-                    self.devaddr = self._convert_array(config["devaddr"])
-                    self.nwskey = self._convert_array(config["nwskey"])
-                    self.appskey = self._convert_array(config["appskey"])
+                    self.devaddr = self._convert_array(config["devaddr"], 10)
+                    self.nwkskey = self._convert_array(config["nwkskey"], 10)
+                    self.appskey = self._convert_array(config["appskey"], 10)
                 except (KeyError, ValueError):
                     self.logger.warning("Unable to read session details")
                     self.devaddr = None
-                    self.nwskey = None
+                    self.nwkskey = None
                     self.appskey = None
             else:
                 self.logger.critical("Unsupported auth mode chosen: %s", auth)
                 raise DraginoError("Unsupported auth mode")
             try:
-                self.fcount = config["fcount"]
+                self.fcount = int(config["fcount"])
             except KeyError:
                 self.fcount = self._read_legacy_fcount() #load from previos file
                 self.save()
@@ -343,6 +355,10 @@ class DraginoConfig():
             self.logger.critical("Unable to parse number %s", str(err))
             raise DraginoError(err) from None
 
+    def joined(self):
+        joined = bool(self.appskey) and bool(self.devaddr) and bool(self.nwkskey)
+        self.logger.debug("Joined %r", joined)
+        return joined
 
     def save(self):
         """
@@ -353,12 +369,12 @@ class DraginoConfig():
         if self.auth == AUTH_OTAA: #have session params to save
             self._config["appskey"] = self.appskey
             self._config["devaddr"] = self.devaddr
-            self._config["nwkskey"] = self.nwskey
+            self._config["nwkskey"] = self.nwkskey
         self._config.write()
 
     def save_credentials(self, devaddr, nwskey, appskey, fcount):
         self.devaddr = devaddr
-        self.nwskey = nwskey
+        self.nwkskey = nwskey
         self.appskey = appskey
         self.fcount = fcount
         self.save()
@@ -385,12 +401,12 @@ class DraginoConfig():
             self.logger.error(str(exp))
             return 1
 
-    def _convert_array(self, arr):
+    def _convert_array(self, arr, base=16):
         """
             Takes an array of hex strings and converts them into integers
         """
         new_arr = []
         for item in arr:
-            new_arr.append(int(item, 16))
+            new_arr.append(int(item, base))
         self.logger.debug("Converted %d/%d items", len(new_arr), len(arr))
         return new_arr
