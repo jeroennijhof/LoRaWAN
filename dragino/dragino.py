@@ -28,7 +28,7 @@ from .SX127x.board_config import BOARD
 from .LoRaWAN import new as lorawan_msg
 from .LoRaWAN import MalformedPacketException
 from .LoRaWAN.MHDR import MHDR
-from .FrequncyPlan import LORA_FREQS
+from .FrequncyPlan import LORA_FREQS, JOIN_FREQS
 
 
 DEFAULT_LOG_LEVEL = logging.WARN #Change after finishing development
@@ -69,9 +69,6 @@ class Dragino(LoRa):
         self._read_frame_count()
         self.set_mode(MODE.SLEEP)
         self.set_dio_mapping([1, 0, 0, 0, 0, 0])
-        freq = freqs[randrange(len(freqs))]#Pick a random frequency
-        self.set_freq(freq)
-        self.logger.info("Frequency = %s", freq)
         self.set_pa_config(pa_select=1)
         self.set_spreading_factor(self.config.spreading_factor)
         self.set_pa_config(
@@ -93,6 +90,17 @@ class Dragino(LoRa):
             self.config.gps_baud_rate,
             timeout=self.config.gps_serial_timeout)
         self.gps_serial.flush()
+
+    def _choose_freq(self, join=False):
+        if join:
+            available = JOIN_FREQS
+        else:
+            available = LORA_FREQS
+        freq = available[randrange(len(available))]#Pick a random frequency
+        self.set_mode(MODE.SLEEP)
+        self.set_freq(freq)
+        self.logger.info("Frequency = %s", freq)
+
 
     def _read_frame_count(self):
         """
@@ -167,6 +175,7 @@ class Dragino(LoRa):
                 self.logger.info("App key = %s", appkey)
                 self.logger.info("App eui = %s", appeui)
                 self.logger.info("Dev eui = %s", deveui)
+                self._choose_freq(True)
                 lorawan = lorawan_msg(appkey)
                 lorawan.create(
                     MHDR.JOIN_REQUEST,
@@ -192,6 +201,7 @@ class Dragino(LoRa):
         if self.network_key is None or self.apps_key is None: # either using ABP / join has  run
             raise DraginoError("No network and/or apps key")
         while attempt <= self.lora_retries: # try a couple of times because of
+            self._choose_freq()
             attempt += 1 #  intermittent malformed packets nasty hack
             try: #shouldn't be needed
                 lorawan = lorawan_msg(self.network_key, self.apps_key)
