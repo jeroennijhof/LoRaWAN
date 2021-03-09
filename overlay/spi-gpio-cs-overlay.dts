@@ -1,0 +1,40 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+   compatible = "brcm,bcm2835", "brcm,bcm2836", "brcm,bcm2708", "brcm,bcm2709";
+
+   fragment@0 {
+      target = <&spi0>;
+      frag0: __overlay__ {
+         #address-cells = <1>;
+         #size-cells = <0>;
+         pinctrl-0 = <&spi0_pins &spi0_cs_pins>;
+         status = "okay";
+         cs-gpios = <0>, <0>, <&gpio 25 1>;
+
+         spidev@2{
+            compatible = "spidev";
+            reg = <2>;   /* CE2 */
+            #address-cells = <1>;
+            #size-cells = <0>;
+            spi-max-frequency = <500000>;
+         };
+      };
+   };
+
+   fragment@1 {
+      target = <&gpio>;
+      __overlay__ {
+         spi0_cs_pins: spi0_cs_pins {
+            brcm,pins = <25>;
+            brcm,function = <1>; /* out */
+         };
+      };
+   };
+
+   __overrides__ {
+      cs2_pin = <&frag0>,"cs-gpios:12", <&spi0_cs_pins>,"brcm,pins:0";
+      cs3_pin = <&frag0>,"cs-gpios:24", <&spi0_cs_pins>,"brcm,pins:4";
+   };
+};

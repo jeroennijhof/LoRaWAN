@@ -19,25 +19,26 @@
 # You should have received a copy of the GNU General Public License along with pySX127.  If not, see
 # <http://www.gnu.org/licenses/>.
 
-
+#Modified 2018-01-10 Philip Basford to be compatible with the dragino LoRa HAT
 import RPi.GPIO as GPIO
 import spidev
 
 import time
 
 
+
 class BOARD:
     """ Board initialisation/teardown and pin configuration is kept here.
-        This is the Raspberry Pi board with one LED and a modtronix inAir9B
+        This is the Raspberry Pi board with a Dragino LoRa/GPS HAT
     """
     # Note that the BCOM numbering for the GPIOs is used.
-    DIO0 = 22   # RaspPi GPIO 22
+    DIO0 = 4   # RaspPi GPIO 4
     DIO1 = 23   # RaspPi GPIO 23
     DIO2 = 24   # RaspPi GPIO 24
-    DIO3 = 25   # RaspPi GPIO 25
+    DIO3 = None # Not connected on dragino header
     LED  = 18   # RaspPi GPIO 18 connects to the LED on the proto shield
     SWITCH = 4  # RaspPi GPIO 4 connects to a switch
-
+    SPI_CS = 2  # Chip Select pin to use
     # The spi object is kept here
     spi = None
 
@@ -54,7 +55,8 @@ class BOARD:
         GPIO.setup(BOARD.SWITCH, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) 
         # DIOx
         for gpio_pin in [BOARD.DIO0, BOARD.DIO1, BOARD.DIO2, BOARD.DIO3]:
-            GPIO.setup(gpio_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+            if gpio_pin is not None:
+                GPIO.setup(gpio_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         # blink 2 times to signal the board is set up
         BOARD.blink(.1, 2)
 
@@ -65,7 +67,7 @@ class BOARD:
         BOARD.spi.close()
 
     @staticmethod
-    def SpiDev(spi_bus=0, spi_cs=0):
+    def SpiDev(spi_bus=0, spi_cs=SPI_CS):
         """ Init and return the SpiDev object
         :return: SpiDev object
         :param spi_bus: The RPi SPI bus to use: 0 or 1
@@ -87,10 +89,14 @@ class BOARD:
 
     @staticmethod
     def add_events(cb_dio0, cb_dio1, cb_dio2, cb_dio3, cb_dio4, cb_dio5, switch_cb=None):
-        BOARD.add_event_detect(BOARD.DIO0, callback=cb_dio0)
-        BOARD.add_event_detect(BOARD.DIO1, callback=cb_dio1)
-        BOARD.add_event_detect(BOARD.DIO2, callback=cb_dio2)
-        BOARD.add_event_detect(BOARD.DIO3, callback=cb_dio3)
+        if BOARD.DIO0 is not None:
+            BOARD.add_event_detect(BOARD.DIO0, callback=cb_dio0)
+        if BOARD.DIO1 is not None:
+            BOARD.add_event_detect(BOARD.DIO1, callback=cb_dio1)
+        if BOARD.DIO2 is not None:
+            BOARD.add_event_detect(BOARD.DIO2, callback=cb_dio2)
+        if BOARD.DIO3 is not None:
+            BOARD.add_event_detect(BOARD.DIO3, callback=cb_dio3)
         # the modtronix inAir9B does not expose DIO4 and DIO5
         if switch_cb is not None:
             GPIO.add_event_detect(BOARD.SWITCH, GPIO.RISING, callback=switch_cb, bouncetime=300)
