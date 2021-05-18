@@ -6,9 +6,7 @@
     running this test.
 
     Downlink messages are only sent for class A devices after an uplink
-    message is received by TTN - presumably that is to prevent sending messages
-    when your end device isn't alive.
-
+    message is received by TTN.
 """
 import logging
 from time import sleep,time
@@ -53,17 +51,15 @@ while not D.registered():
     sleep(2)
 
 
-print("Sending a message to prompt for any scheduled downlinks.") 
+print("Sending a message to prompt for any scheduled downlinks.")
 D.send("hello")
 
 print("Waiting for callback message. Press CTRL-C to quit.")
 try:
     while not callbackReceived:
         sleep(2)
-    
+
 except Exception as e:
     print("Exception:",e)
 
 print("test_downlink.py Finished")
-
-
