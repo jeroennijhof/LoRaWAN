@@ -10,6 +10,7 @@ from dragino import Dragino
 
 GPIO.setwarnings(False)
 
+# add logfile
 logLevel=logging.DEBUG
 logging.basicConfig(filename="test.log", format='%(asctime)s - %(funcName)s - %(lineno)d - %(levelname)s - %(message)s', level=logLevel)
 
