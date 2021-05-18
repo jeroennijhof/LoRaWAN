@@ -10,13 +10,17 @@ from dragino import Dragino
 
 GPIO.setwarnings(False)
 
-D = Dragino("dragino.ini", logging_level=logging.DEBUG)
+logLevel=logging.DEBUG
+logging.basicConfig(filename="test.log", format='%(asctime)s - %(funcName)s - %(lineno)d - %(levelname)s - %(message)s', level=logLevel)
+
+
+D = Dragino("dragino.ini", logging_level=logLevel)
 D.join()
 while not D.registered():
-    print("Waiting")
+    print("Waiting for JOIN ACCEPT")
     sleep(2)
 #sleep(10)
 for i in range(0, 5):
     D.send("Hello World")
-    print("Sent message")
+    print("Sent Hello World message")
     sleep(1)
