@@ -28,7 +28,7 @@ See: https://www.lora-alliance.org/portals/0/specs/LoRaWAN%20Specification%201R0
     4. Enable the overlay at next reboot `echo "dtoverlay=spi-gpio-cs" | sudo tee -a /boot/config.txt`
     5. Reboot the Pi `sudo reboot`
     6. Check that the new cs lines are enabled `ls /dev/spidev0.*` should output `/dev/spidev0.0  /dev/spidev0.1  /dev/spidev0.2`.  In which case the required SPI CS line now exists
-7. Create a new device in The Things Network console and copy the details into the config file dragino.ini
+7. Create a new device in The Things Network console and copy the details into the config file `dragino.ini`
 8. Run the test programm `./test.py` and the device should transmit on the things network using OTAA authentication
 9. run './test_downlink.py' to check downlink messages are received (after scheduling one in the TTN console)
 
