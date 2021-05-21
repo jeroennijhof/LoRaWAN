@@ -91,6 +91,28 @@ class Dragino(LoRa):
             timeout=self.config.gps_serial_timeout)
         self.gps_serial.flush()
 
+        # for downlink messages
+        self.downlinkCallback=None
+
+    def setDownlinkCallback(self,func=None):
+        """
+        Configure the callback function which will receive
+        two parameters: decodedPayload and mtype.
+
+        decodedPayload will be a bytearray.
+        mtype will be MHDR.UNCONF_DATA_DOWN or MHDR.CONF_DATA_DOWN.
+
+        See test_downlink.py for usage.
+
+        func: function to call when a downlink message is received
+        """
+        if hasattr(func,'__call__'):
+            self.logger.info("Setting downlinkCallback to %s",func)
+            self.downlinkCallback=func
+        else:
+            self.logger.info("downlinkCallback is not callable")
+
+
     def _choose_freq(self, join=False):
         if join:
             available = JOIN_FREQS
@@ -119,15 +141,39 @@ class Dragino(LoRa):
         """
             Callback on RX complete, signalled by I/O
         """
-        self.logger.debug("Recieved message")
         self.clear_irq_flags(RxDone=1)
-        payload = self.read_payload(nocheck=True)
-        lorawan = lorawan_msg([], self.appkey)
-        lorawan.read(payload)
-        lorawan.get_payload()
-#        print(lorawan.get_mhdr().get_mversion())
-        if lorawan.get_mhdr().get_mtype() == MHDR.JOIN_ACCEPT:
-            self.logger.debug("Join resp")
+        self.logger.debug("Recieved message")
+              
+        try:
+
+            payload = self.read_payload(nocheck=True)
+            
+            if payload is None:
+                self.logger.info("payload is None")
+                return
+           
+            if not self.config.joined():
+               # not joined yet
+               self.logger.info("processing JOIN_ACCEPT payload")
+               lorawan = lorawan_msg([], self.appkey)
+               lorawan.read(payload)
+               decodedPayload=lorawan.get_payload()
+            else:
+               # joined
+               self.logger.info("processing payload after joined")               
+               lorawan = lorawan_msg(self.network_key, self.apps_key)
+               lorawan.read(payload)
+               decodedPayload=lorawan.get_payload()
+        
+        except Exception as e:
+            self.logger.exception("Exception %s",e)
+            return
+        
+        mtype=lorawan.get_mhdr().get_mtype()
+        self.logger.debug("Processing message: MDHR version %s mtype %s payload %s ",lorawan.get_mhdr().get_mversion(), mtype,decodedPayload)
+
+        if mtype == MHDR.JOIN_ACCEPT:
+            self.logger.debug("Processing JOIN_ACCEPT")
             #It's a response to a join request
             lorawan.valid_mic()
             self.device_addr = lorawan.get_devaddr()
@@ -138,9 +184,22 @@ class Dragino(LoRa):
             self.logger.info("APPS key: %s", self.apps_key)
             self.frame_count = 1
             self.config.save_credentials(
-                self.device_addr, self.network_key,
-                self.apps_key, self.frame_count)
+                    self.device_addr, self.network_key,
+                    self.apps_key, self.frame_count)
+            return
+        
+        elif mtype==MHDR.UNCONF_DATA_DOWN or mtype==MHDR.CONF_DATA_DOWN:
+            self.logger.debug("Downlink data received")
+            
+            if self.downlinkCallback is not None:
+                lorawan.valid_mic()
+                self.downlinkCallback(decodedPayload,mtype)
+            return
+        else:
+            self.logger.debug("Unexpected message type %s",mtype)
+        
 
+        
     def on_tx_done(self):
         """
             Callback on TX complete is signaled using I/O
