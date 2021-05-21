@@ -33,6 +33,8 @@ def downlinkCallback(payload,mtype):
     payload: bytearray
     mtype: one of UNCONF_DATA_DOWN or CONF_DATA_DOWN
     '''
+    global callbackReceived
+    callbackReceived = True
     print("downlink message received")
 
     if mtype==MHDR.UNCONF_DATA_DOWN:
