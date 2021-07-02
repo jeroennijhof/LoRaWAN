@@ -54,8 +54,6 @@ class Dragino(LoRa):
             format='%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
         BOARD.setup()
         super(Dragino, self).__init__(logging_level < logging.INFO)
-        self.devnonce = [randrange(256), randrange(256)] #random nonce
-        self.logger.debug("Nonce = %s", self.devnonce)
         self.freqs = freqs
         #Set all auth method tockens to None as not sure what auth method we'll use
         self.device_addr = None
@@ -217,6 +215,8 @@ class Dragino(LoRa):
         """
             Perform the OTAA auth in order to get the keys requried to transmit
         """
+        self.devnonce = [randrange(256), randrange(256)] #random nonce
+        self.logger.debug("Nonce = %s", self.devnonce)
         if self.config.auth == AUTH_ABP:
             self.logger.info("Using ABP no need to Join")
         elif self.config.auth == AUTH_OTAA:
