@@ -240,6 +240,7 @@ class Dragino(LoRa):
                     MHDR.JOIN_REQUEST,
                     {'deveui': deveui, 'appeui': appeui, 'devnonce': self.devnonce})
                 self.write_payload(lorawan.to_raw())
+                self.set_dio_mapping([1, 0, 0, 0, 0, 0])
                 self.set_mode(MODE.TX)
         else:
             self.logger.error("Unknown auth mode")
