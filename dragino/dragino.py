@@ -62,6 +62,7 @@ class Dragino(LoRa):
         self.appkey = None
         self.appeui = None
         self.deveui = None
+        self.transmitting = False
         self.config = DraginoConfig(config_filename, logging_level)
         self.lora_retries = lora_retries
         self._read_frame_count()
@@ -203,6 +204,7 @@ class Dragino(LoRa):
             Callback on TX complete is signaled using I/O
         """
         self.logger.debug("TX Complete")
+        self.transmitting = False
         self.clear_irq_flags(TxDone=1)
         self.set_mode(MODE.STDBY)
         self.set_dio_mapping([0, 0, 0, 0, 0, 0])
@@ -242,6 +244,7 @@ class Dragino(LoRa):
                 self.write_payload(lorawan.to_raw())
                 self.set_dio_mapping([1, 0, 0, 0, 0, 0])
                 self.set_mode(MODE.TX)
+                self.transmitting = True
         else:
             self.logger.error("Unknown auth mode")
             return
@@ -276,6 +279,7 @@ class Dragino(LoRa):
                 self.logger.debug("Packet = %s", lorawan.to_raw())
                 self.set_dio_mapping([1, 0, 0, 0, 0, 0])
                 self.set_mode(MODE.TX)
+                self.transmitting = True
                 self.logger.info(
                     "Succeeded on attempt %d/%d", attempt, self.lora_retries)
                 self._save_frame_count()

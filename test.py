@@ -3,6 +3,7 @@
     Test harness for dragino module - sends hello world out over LoRaWAN 5 times
 """
 import logging
+from datetime import datetime
 from time import sleep
 import RPi.GPIO as GPIO
 from dragino import Dragino
@@ -21,7 +22,11 @@ while not D.registered():
     print("Waiting for JOIN ACCEPT")
     sleep(2)
 #sleep(10)
-for i in range(0, 5):
+for i in range(0, 2):
     D.send("Hello World")
-    print("Sent Hello World message")
+    start = datetime.utcnow()
+    while D.transmitting:
+        pass
+    end = datetime.utcnow()
+    print("Sent Hello World message ({})".format(end-start))
     sleep(1)
