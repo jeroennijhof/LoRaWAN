@@ -1,3 +1,5 @@
+# NB: This is no longer developed
+
 # LoRaWAN
 This is a LoRaWAN v1.0 implementation in python for the Dragino LoRa/GPS HAT, it is currently being used to connect to the things network https://thethingsnetwork.org.  It is based on work at https://github.com/jeroennijhof/LoRaWAN
 
